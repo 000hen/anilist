@@ -12,7 +12,7 @@ import coil.compose.AsyncImage
 fun CoverImage(
     url: String,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.FillWidth
 ) {
     AsyncImage(
         model = url,
