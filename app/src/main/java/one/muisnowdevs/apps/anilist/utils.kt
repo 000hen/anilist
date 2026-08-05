@@ -1,45 +1,9 @@
 package one.muisnowdevs.apps.anilist
 
 import android.util.Log
-import one.muisnowdevs.apps.anilist.source.Season
-import one.muisnowdevs.apps.anilist.source.Week
+import java.time.DayOfWeek
 import java.time.LocalDate
-import java.util.Calendar
 import kotlin.time.Duration.Companion.minutes
-
-fun getCurrentSession(): Pair<Int, Season> {
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH) + 1
-
-    return year to Season.fromMonth(month)
-}
-
-fun getCurrentSessionString(): String {
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH)
-
-    return when (month) {
-        in 0..2 -> "${year}01"
-        in 3..5 -> "${year}04"
-        in 6..8 -> "${year}07"
-        in 9..11 -> "${year}10"
-        else -> error("Invalid month")
-    }
-}
-
-fun getMinimalMinute(): Int {
-    val week = Week.getToday()
-    return week.weekNumber * 1440
-}
-
-fun getCurrentMinute(): Int {
-    val calendar = Calendar.getInstance()
-    return getMinimalMinute() +
-            calendar.get(Calendar.HOUR_OF_DAY) * 60 +
-            calendar.get(Calendar.MINUTE)
-}
 
 /** Renders "minutes past midnight" as the `@HH:mm` badge shown next to a title. */
 fun formatTimeInDay(minutesInDay: Int): String =
@@ -53,16 +17,16 @@ fun <T> List<T>.rotate(startIndex: Int): List<T> {
     return drop(index) + take(index)
 }
 
-fun getTodayOrder(): List<Week> {
+fun getTodayOrder(): List<DayOfWeek> {
     val dayOfWeek = LocalDate.now().dayOfWeek
     val rotate = listOf(
-        Week.SUNDAY,
-        Week.MONDAY,
-        Week.TUESDAY,
-        Week.WEDNESDAY,
-        Week.THURSDAY,
-        Week.FRIDAY,
-        Week.SATURDAY,
+        DayOfWeek.SUNDAY,
+        DayOfWeek.MONDAY,
+        DayOfWeek.TUESDAY,
+        DayOfWeek.WEDNESDAY,
+        DayOfWeek.THURSDAY,
+        DayOfWeek.FRIDAY,
+        DayOfWeek.SATURDAY,
     ).rotate(dayOfWeek.value)
 
     Log.d("utils", "RESULT: $rotate, today: $dayOfWeek")

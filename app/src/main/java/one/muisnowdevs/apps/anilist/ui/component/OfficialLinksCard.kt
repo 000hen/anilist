@@ -11,11 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import one.muisnowdevs.apps.anilist.source.SocialLink
+import one.muisnowdevs.apps.anilist.source.AnilistSite
 
 /** Card listing every official site of a title as an [ExternalLinkText]. */
 @Composable
-fun OfficialLinksCard(links: List<SocialLink>, modifier: Modifier = Modifier) {
+fun OfficialLinksCard(links: List<AnilistSite>, modifier: Modifier = Modifier) {
     Card(modifier = modifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(

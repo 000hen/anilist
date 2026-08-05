@@ -25,27 +25,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.SubcomposeAsyncImage
-import one.muisnowdevs.apps.anilist.source.Streaming
-
-private const val VENDOR_ICON_BASE_URL = "https://d28s5ztqvkii64.cloudfront.net/images"
+import one.muisnowdevs.apps.anilist.source.AnilistStreaming
 
 /** Vendor badge: names the vendor on long press, opens its watch page on tap. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StreamingIcon(streaming: Streaming, modifier: Modifier = Modifier) {
+fun StreamingIcon(streaming: AnilistStreaming, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Above
         ),
-        tooltip = { PlainTooltip { Text(streaming.vendor) } },
+        tooltip = { PlainTooltip { Text(streaming.name) } },
         state = rememberTooltipState(),
         modifier = modifier
     ) {
         SubcomposeAsyncImage(
-            model = "$VENDOR_ICON_BASE_URL/${streaming.vendor}_icon.webp",
-            contentDescription = streaming.title,
+            model = streaming.logo,
+            contentDescription = streaming.name,
             modifier = Modifier
                 .size(56.dp)
                 .clip(MaterialTheme.shapes.small)
@@ -65,7 +63,7 @@ fun StreamingIcon(streaming: Streaming, modifier: Modifier = Modifier) {
 
 /** Centred, wrapping row of [StreamingIcon]s. */
 @Composable
-fun StreamingIconRow(streamings: List<Streaming>, modifier: Modifier = Modifier) {
+fun StreamingIconRow(streamings: List<AnilistStreaming>, modifier: Modifier = Modifier) {
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),

@@ -16,12 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import one.muisnowdevs.apps.anilist.source.AnimeInformation
+import one.muisnowdevs.apps.anilist.source.AnilistAnime
 
 /** Full detail of a single title: artwork, where to watch it, synopsis and official links. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnimeDetailSheet(anime: AnimeInformation, onDismissRequest: () -> Unit = {}) {
+fun AnimeDetailSheet(anime: AnilistAnime, onDismissRequest: () -> Unit = {}) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = rememberModalBottomSheetState(true)
@@ -38,7 +38,7 @@ fun AnimeDetailSheet(anime: AnimeInformation, onDismissRequest: () -> Unit = {})
                     contentAlignment = Alignment.Center
                 ) {
                     CoverImage(
-                        url = anime.cover,
+                        url = anime.image,
                         modifier = Modifier.fillMaxWidth(0.6f),
                         contentScale = ContentScale.Crop
                     )
@@ -47,7 +47,7 @@ fun AnimeDetailSheet(anime: AnimeInformation, onDismissRequest: () -> Unit = {})
 
             item {
                 StreamingIconRow(
-                    streamings = anime.streaming + anime.adultstreaming,
+                    streamings = anime.streaming,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -60,9 +60,7 @@ fun AnimeDetailSheet(anime: AnimeInformation, onDismissRequest: () -> Unit = {})
                 )
             }
             item { Text(text = anime.description, style = MaterialTheme.typography.bodyMedium) }
-            item { Text(text = anime.episode, style = MaterialTheme.typography.bodyMedium) }
-
-            item { OfficialLinksCard(links = anime.olinks) }
+            item { OfficialLinksCard(links = anime.site) }
         }
     }
 }

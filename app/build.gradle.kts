@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-
-    kotlin("plugin.serialization") version "2.0.0"
 }
 
 android {
@@ -58,14 +56,12 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
-    implementation(libs.retrofit)
-    implementation(libs.converter.scalars)
     implementation(libs.androidx.compose.material.icons.extended)
-
     implementation(libs.coil.compose)
-
-    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    implementation(project(":source"))
+    implementation(project(":source:youranimes"))
 }

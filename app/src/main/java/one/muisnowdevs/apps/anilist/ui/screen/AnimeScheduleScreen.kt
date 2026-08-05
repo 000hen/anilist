@@ -22,16 +22,16 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import one.muisnowdevs.apps.anilist.getCurrentSession
 import one.muisnowdevs.apps.anilist.getTodayOrder
-import one.muisnowdevs.apps.anilist.source.AnimeFavorite
-import one.muisnowdevs.apps.anilist.source.AnimeInformation
-import one.muisnowdevs.apps.anilist.source.Week
+import one.muisnowdevs.apps.anilist.source.AnilistAnime
+import one.muisnowdevs.apps.anilist.AnimeFavorite
+import one.muisnowdevs.apps.anilist.source.getCurrentSeason
 import one.muisnowdevs.apps.anilist.ui.component.AnimeCard
 import one.muisnowdevs.apps.anilist.ui.component.AnimeDetailSheet
 import one.muisnowdevs.apps.anilist.ui.component.DayHeader
 import one.muisnowdevs.apps.anilist.ui.component.SwipeToFavoriteBox
 import one.muisnowdevs.apps.anilist.viewmodel.MainViewModel
+import java.time.DayOfWeek
 import java.time.format.TextStyle
 
 /**
@@ -69,7 +69,7 @@ fun AnimeScheduleScreen(
             .filterValues { it.isNotEmpty() }
     }
 
-    var detailedAnime by remember { mutableStateOf<AnimeInformation?>(null) }
+    var detailedAnime by remember { mutableStateOf<AnilistAnime?>(null) }
 
     detailedAnime?.let { anime ->
         AnimeDetailSheet(anime) { detailedAnime = null }
@@ -78,7 +78,7 @@ fun AnimeScheduleScreen(
     PullToRefreshBox(
         isRefreshing = isLoading,
         onRefresh = {
-            val (year, season) = getCurrentSession()
+            val (year, season) = getCurrentSeason()
             viewModel.reload(year, season)
         },
         modifier = modifier
@@ -105,9 +105,9 @@ fun AnimeScheduleScreen(
  */
 @Composable
 private fun AnimeScheduleList(
-    schedule: Map<Week, List<AnimeInformation>>,
+    schedule: Map<DayOfWeek, List<AnilistAnime>>,
     favoriteIds: Set<String>,
-    onAnimeClick: (AnimeInformation) -> Unit,
+    onAnimeClick: (AnilistAnime) -> Unit,
     onFavoriteChange: (id: String, favorite: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -134,7 +134,7 @@ private fun AnimeScheduleList(
                 }
 
                 DayHeader(
-                    text = day.week.getDisplayName(TextStyle.FULL, locale),
+                    text = day.getDisplayName(TextStyle.FULL, locale),
                     isFloating = isFloating,
                     onClick = { scope.launch { state.animateScrollToItem(headerIndex) } },
                     modifier = Modifier.animateItem()
@@ -147,7 +147,9 @@ private fun AnimeScheduleList(
                 SwipeToFavoriteBox(
                     isFavorite = isFavorite,
                     onFavoriteChange = { onFavoriteChange(anime.id, it) },
-                    modifier = Modifier.padding(horizontal = 8.dp).animateItem()
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .animateItem()
                 ) {
                     AnimeCard(
                         anime = anime,

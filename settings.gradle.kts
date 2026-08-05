@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Anilist"
 include(":app")
- 
+include(":source")
+include(":source:youranimes")

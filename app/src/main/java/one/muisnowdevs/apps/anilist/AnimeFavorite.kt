@@ -1,4 +1,4 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist
 
 import android.content.Context
 import androidx.core.content.edit

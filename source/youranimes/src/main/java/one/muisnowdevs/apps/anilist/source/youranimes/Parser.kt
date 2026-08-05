@@ -1,8 +1,17 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist.source.youranimes
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import one.muisnowdevs.apps.anilist.converter.WeekConverter
+import one.muisnowdevs.apps.anilist.source.AnilistAnime
+import one.muisnowdevs.apps.anilist.source.AnilistSite
+import one.muisnowdevs.apps.anilist.source.AnilistStreaming
+import one.muisnowdevs.apps.anilist.source.WeekTime
+import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesWeekConverter
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+
+private const val VENDOR_ICON_BASE_URL = "https://d28s5ztqvkii64.cloudfront.net/images"
 
 @Serializable
 data class AnimeInformation(
@@ -21,8 +30,8 @@ data class AnimeInformation(
     val cross: Boolean,
     val date: String,
 
-    @Serializable(with = WeekConverter::class)
-    val dayOfWeek: Week,
+    @Serializable(with = YourAnimesWeekConverter::class)
+    val dayOfWeek: DayOfWeek,
 
     val description: String,
     val durationDesc: String? = null,
@@ -53,7 +62,30 @@ data class AnimeInformation(
     @SerialName("_weekMinutes")
     val timeInDay: Int
 ) {
-    fun getWeeklyTime(): Int = dayOfWeek.weekNumber * 1440 + timeInDay
+    fun getWeeklyTime(): Int = (dayOfWeek.value - 1) * 1440 + timeInDay
+    fun toAnilistAnime(): AnilistAnime = AnilistAnime(
+        id = "youranimes:$id",
+        onAirTime = WeekTime(
+            dayOfWeek,
+            timeInDay % 1440,
+            ZoneId.of("Asia/Tokyo")
+        ).toZone(ZoneId.systemDefault(), LocalDate.now()),
+        name = name,
+        description = description,
+        isAdult = adultContent || adultstreaming.isNotEmpty(),
+        image = cover,
+        banner = null,
+        cast = cast.map { it.name },
+        genres = tags.keys.toList(),
+        streaming = (streaming + adultstreaming).toSet().map { stream ->
+            AnilistStreaming(
+                stream.vendor,
+                stream.url,
+                "$VENDOR_ICON_BASE_URL/${stream.vendor}_icon.webp"
+            )
+        },
+        site = olinks.map { link -> AnilistSite(link.title, link.url) },
+    )
 }
 
 @Serializable

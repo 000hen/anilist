@@ -23,9 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import one.muisnowdevs.apps.anilist.formatTimeInDay
-import one.muisnowdevs.apps.anilist.getCurrentMinute
-import one.muisnowdevs.apps.anilist.getMinimalMinute
-import one.muisnowdevs.apps.anilist.source.AnimeInformation
+import one.muisnowdevs.apps.anilist.source.AnilistAnime
+import one.muisnowdevs.apps.anilist.source.getCurrentMinute
+import one.muisnowdevs.apps.anilist.source.getMinimalMinute
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -36,18 +36,19 @@ import kotlin.time.Duration.Companion.minutes
  */
 @Composable
 fun AnimeCard(
-    anime: AnimeInformation,
+    anime: AnilistAnime,
     modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val weeklyTime by remember(anime) { mutableIntStateOf(anime.getWeeklyTime()) }
+    val weeklyTime by remember(anime) { mutableIntStateOf(anime.onAirTime.minuteOfWeek) }
     var isOver by remember(weeklyTime) {
-        mutableStateOf(getCurrentMinute() >= weeklyTime && weeklyTime >= getMinimalMinute())
+        mutableStateOf(weeklyTime <= getCurrentMinute() && weeklyTime >= getMinimalMinute())
     }
 
     LaunchedEffect(Unit) {
         if (isOver) return@LaunchedEffect
+        if (weeklyTime <= getMinimalMinute()) return@LaunchedEffect
 
         delay((weeklyTime - getCurrentMinute()).minutes)
         isOver = true
@@ -67,7 +68,11 @@ fun AnimeCard(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CoverImage(url = anime.cover, modifier = Modifier.fillMaxWidth(0.2f))
+            CoverImage(
+                url = anime.image,
+                modifier = Modifier.fillMaxWidth(0.2f),
+                description = "Image of ${anime.name}"
+            )
 
             Column {
                 Row(
@@ -76,7 +81,7 @@ fun AnimeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = formatTimeInDay(anime.timeInDay),
+                        text = formatTimeInDay(anime.onAirTime.minute),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -89,10 +94,10 @@ fun AnimeCard(
                     style = MaterialTheme.typography.titleLarge
                 )
 
-                if (anime.adultContent) AdultTag(modifier = Modifier.padding(top = 4.dp))
+                if (anime.isAdult) AdultTag(modifier = Modifier.padding(top = 4.dp))
 
                 RecommendationTagRow(
-                    tags = anime.tags.keys,
+                    tags = anime.genres,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)

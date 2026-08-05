@@ -1,4 +1,4 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist.source.youranimes
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -6,11 +6,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import one.muisnowdevs.apps.anilist.getCurrentSessionString
+import one.muisnowdevs.apps.anilist.source.AnilistAnime
+import one.muisnowdevs.apps.anilist.source.AnilistSeason
+import one.muisnowdevs.apps.anilist.source.AnimeSource
+import one.muisnowdevs.apps.anilist.source.getCurrentSessionString
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
+import java.time.DayOfWeek
+import java.time.Year
 
 private const val TAG = "YourAnimesSource"
 
@@ -59,11 +64,17 @@ object YourAnimesSource : AnimeSource {
         return@withContext contentInner.toString()
     }
 
-    override suspend fun load(year: Int, season: Season): Map<Week, List<AnimeInformation>> {
-        val path = "${year}${season.month.toString().padStart(2, '0')}"
+    override suspend fun list(
+        year: Year,
+        season: AnilistSeason
+    ): Map<DayOfWeek, List<AnilistAnime>> {
+        val path = "${year.value}${season.month.toString().padStart(2, '0')}"
         val raw = loadRaw(path)
 
         val list = json.decodeFromString<List<AnimeInformation>>(raw)
-        return list.sortedBy { it.getWeeklyTime() }.groupBy { it.dayOfWeek }
+        return list
+            .sortedBy { it.getWeeklyTime() }
+            .map { it.toAnilistAnime() }
+            .groupBy { it.onAirTime.week }
     }
 }
