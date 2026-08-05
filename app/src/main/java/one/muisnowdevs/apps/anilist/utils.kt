@@ -1,6 +1,7 @@
 package one.muisnowdevs.apps.anilist
 
 import android.util.Log
+import one.muisnowdevs.apps.anilist.source.ScheduleDay
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.minutes
@@ -17,7 +18,7 @@ fun <T> List<T>.rotate(startIndex: Int): List<T> {
     return drop(index) + take(index)
 }
 
-fun getTodayOrder(): List<DayOfWeek> {
+fun getTodayOrder(): List<ScheduleDay> {
     val dayOfWeek = LocalDate.now().dayOfWeek
     val rotate = listOf(
         DayOfWeek.SUNDAY,
@@ -27,9 +28,9 @@ fun getTodayOrder(): List<DayOfWeek> {
         DayOfWeek.THURSDAY,
         DayOfWeek.FRIDAY,
         DayOfWeek.SATURDAY,
-    ).rotate(dayOfWeek.value)
+    ).rotate(dayOfWeek.value).map(ScheduleDay::Of)
 
     Log.d("utils", "RESULT: $rotate, today: $dayOfWeek")
 
-    return rotate
+    return rotate + ScheduleDay.Undetermined
 }

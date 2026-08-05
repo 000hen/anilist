@@ -9,11 +9,12 @@ import kotlinx.serialization.json.jsonObject
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSeason
 import one.muisnowdevs.apps.anilist.source.AnimeSource
+import one.muisnowdevs.apps.anilist.source.ScheduleDay
+import one.muisnowdevs.apps.anilist.source.WeekTime
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
-import java.time.DayOfWeek
 import java.time.Year
 
 private const val TAG = "YourAnimesSource"
@@ -66,14 +67,14 @@ object YourAnimesSource : AnimeSource {
     override suspend fun list(
         year: Year,
         season: AnilistSeason
-    ): Map<DayOfWeek, List<AnilistAnime>> {
+    ): Map<ScheduleDay, List<AnilistAnime>> {
         val path = "${year.value}${season.month.toString().padStart(2, '0')}"
         val raw = loadRaw(path)
 
         val list = json.decodeFromString<List<AnimeInformation>>(raw)
         return list
-            .sortedBy { it.getWeeklyTime() }
             .map { it.toAnilistAnime() }
-            .groupBy { it.onAirTime.week }
+            .sortedWith(compareBy(nullsLast(WeekTime.AIRING_ORDER)) { it.onAirTime })
+            .groupBy { ScheduleDay.of(it.onAirTime?.week) }
     }
 }

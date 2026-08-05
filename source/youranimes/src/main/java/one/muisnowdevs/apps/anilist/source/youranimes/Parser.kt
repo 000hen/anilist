@@ -6,6 +6,7 @@ import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSite
 import one.muisnowdevs.apps.anilist.source.AnilistStreaming
 import one.muisnowdevs.apps.anilist.source.WeekTime
+import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesMinuteConverter
 import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesWeekConverter
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -20,7 +21,6 @@ data class AnimeInformation(
 
     val adultContent: Boolean = false,
     val adultstreaming: List<Streaming>,
-    val airedEps: Int? = null,
     val aliases: List<String> = emptyList(),
     val aniType: String,
     val cast: List<Cast>,
@@ -31,11 +31,10 @@ data class AnimeInformation(
     val date: String,
 
     @Serializable(with = YourAnimesWeekConverter::class)
-    val dayOfWeek: DayOfWeek,
+    val dayOfWeek: DayOfWeek? = null,
 
     val description: String = "",
     val durationDesc: String? = null,
-    val enableVoting: Boolean,
     val episode: String,
     val favorability: Favorability,
     val hasNews: Boolean,
@@ -60,16 +59,18 @@ data class AnimeInformation(
     val updatedTimestamp: String,
 
     @SerialName("_weekMinutes")
-    val timeInDay: Int
+    @Serializable(with = YourAnimesMinuteConverter::class)
+    val timeInDay: Int? = null
 ) {
-    fun getWeeklyTime(): Int = (dayOfWeek.value - 1) * 1440 + timeInDay
     fun toAnilistAnime(): AnilistAnime = AnilistAnime(
         id = "youranimes:$id",
-        onAirTime = WeekTime(
-            dayOfWeek,
-            timeInDay % 1440,
-            ZoneId.of("Asia/Tokyo")
-        ).toZone(ZoneId.systemDefault(), LocalDate.now()),
+        onAirTime = dayOfWeek?.let { week ->
+            WeekTime(
+                week,
+                timeInDay?.rem(1440),
+                ZoneId.of("Asia/Tokyo")
+            ).toZone(ZoneId.systemDefault(), LocalDate.now())
+        },
         name = name,
         description = description,
         isAdult = adultContent || adultstreaming.isNotEmpty(),

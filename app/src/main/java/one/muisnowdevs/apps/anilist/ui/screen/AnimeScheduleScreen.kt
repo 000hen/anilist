@@ -30,7 +30,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.style.TextAlign
@@ -41,13 +40,13 @@ import one.muisnowdevs.apps.anilist.AnimeFavorite
 import one.muisnowdevs.apps.anilist.getTodayOrder
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
+import one.muisnowdevs.apps.anilist.source.ScheduleDay
 import one.muisnowdevs.apps.anilist.ui.component.AnimeCard
 import one.muisnowdevs.apps.anilist.ui.component.AnimeDetailSheet
 import one.muisnowdevs.apps.anilist.ui.component.DayHeader
 import one.muisnowdevs.apps.anilist.ui.component.ErrorDetailSheet
 import one.muisnowdevs.apps.anilist.ui.component.SwipeToFavoriteBox
 import one.muisnowdevs.apps.anilist.viewmodel.MainViewModel
-import java.time.DayOfWeek
 import java.time.format.TextStyle
 
 /**
@@ -205,12 +204,16 @@ private fun ScheduleLoadError(
  * week with nothing airing on a Tuesday simply has no Tuesday in it, and filtering empties days the
  * same way; either way a header with nothing beneath it is just noise between two real days.
  *
+ * [ScheduleDay.Undetermined] rides that rule rather than getting one of its own: it is last in the
+ * order and absent from most seasons, so the section appears only when something has been announced
+ * without a weekday and costs nothing on every other week.
+ *
  * The order still opens on today even in a season that is not airing, where today means nothing to
  * the schedule — it means something to the reader, who gets the same shape of list either way.
  */
 @Composable
 private fun AnimeScheduleList(
-    schedule: Map<DayOfWeek, List<AnilistAnime>>,
+    schedule: Map<ScheduleDay, List<AnilistAnime>>,
     favoriteIds: Set<String>,
     onAnimeClick: (AnilistAnime) -> Unit,
     onFavoriteChange: (id: String, favorite: Boolean) -> Unit,
@@ -240,7 +243,10 @@ private fun AnimeScheduleList(
                 }
 
                 DayHeader(
-                    text = day.getDisplayName(TextStyle.FULL, locale),
+                    text = when (day) {
+                        is ScheduleDay.Of -> day.week.getDisplayName(TextStyle.FULL, locale)
+                        ScheduleDay.Undetermined -> "未定"
+                    },
                     isFloating = isFloating,
                     onClick = { scope.launch { state.animateScrollToItem(headerIndex) } },
                     modifier = Modifier.animateItem()

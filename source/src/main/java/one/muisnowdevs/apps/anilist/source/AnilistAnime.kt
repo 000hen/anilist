@@ -4,7 +4,7 @@ data class AnilistAnime(
     val id: String,
 
     val name: String,
-    val onAirTime: WeekTime,
+    val onAirTime: WeekTime?,
     val description: String,
     val isAdult: Boolean,
 

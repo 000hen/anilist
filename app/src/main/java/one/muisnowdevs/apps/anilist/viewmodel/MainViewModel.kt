@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,13 +12,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
+import one.muisnowdevs.apps.anilist.source.ScheduleDay
 import one.muisnowdevs.apps.anilist.source.youranimes.YourAnimesSource
-import java.time.DayOfWeek
 import kotlin.coroutines.coroutineContext
 
 class MainViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow<Map<DayOfWeek, List<AnilistAnime>>>(emptyMap())
-    val uiState: StateFlow<Map<DayOfWeek, List<AnilistAnime>>> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<Map<ScheduleDay, List<AnilistAnime>>>(emptyMap())
+    val uiState: StateFlow<Map<ScheduleDay, List<AnilistAnime>>> = _uiState.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -77,7 +78,7 @@ class MainViewModel : ViewModel() {
         } finally {
             // A cancelled load leaves the flag to its replacement, which has already raised it.
             // Clearing it unconditionally would race that and drop the spinner mid-load.
-            if (coroutineContext.isActive) _isLoading.value = false
+            if (currentCoroutineContext().isActive) _isLoading.value = false
         }
     }
 }

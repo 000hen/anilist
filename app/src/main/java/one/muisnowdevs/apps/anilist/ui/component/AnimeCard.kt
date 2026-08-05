@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,16 +45,19 @@ fun AnimeCard(
     isCurrentSeason: Boolean = true,
     onClick: () -> Unit = {}
 ) {
-    val weeklyTime by remember(anime) { mutableIntStateOf(anime.onAirTime.minuteOfWeek) }
+    val weeklyTime = remember(anime) { anime.onAirTime?.minuteOfWeek }
+
     var isOver by remember(weeklyTime, isCurrentSeason) {
         mutableStateOf(
-            isCurrentSeason && weeklyTime <= getCurrentMinute() && weeklyTime >= getMinimalMinute()
+            isCurrentSeason && weeklyTime != null &&
+                    weeklyTime <= getCurrentMinute() && weeklyTime >= getMinimalMinute()
         )
     }
 
     LaunchedEffect(isCurrentSeason) {
         if (!isCurrentSeason) return@LaunchedEffect
         if (isOver) return@LaunchedEffect
+        if (weeklyTime == null) return@LaunchedEffect
         if (weeklyTime <= getMinimalMinute()) return@LaunchedEffect
 
         delay((weeklyTime - getCurrentMinute()).minutes)
@@ -89,7 +91,7 @@ fun AnimeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = formatTimeInDay(anime.onAirTime.minute),
+                        text = formatTimeInDay(anime.onAirTime?.minute),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
