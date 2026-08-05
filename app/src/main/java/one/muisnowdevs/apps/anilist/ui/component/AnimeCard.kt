@@ -33,20 +33,28 @@ import kotlin.time.Duration.Companion.minutes
  *
  * [isFavorite] is drawn as a [FavoriteTag] beside the airing time; the card only reports it, the
  * caller owns it.
+ *
+ * [isCurrentSeason] gates the aired tint. "Already aired" is a claim about this week, and the row
+ * carries no date — only a weekday and a time — so in any other season the comparison would say
+ * more about where today happens to sit than about the title.
  */
 @Composable
 fun AnimeCard(
     anime: AnilistAnime,
     modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
+    isCurrentSeason: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     val weeklyTime by remember(anime) { mutableIntStateOf(anime.onAirTime.minuteOfWeek) }
-    var isOver by remember(weeklyTime) {
-        mutableStateOf(weeklyTime <= getCurrentMinute() && weeklyTime >= getMinimalMinute())
+    var isOver by remember(weeklyTime, isCurrentSeason) {
+        mutableStateOf(
+            isCurrentSeason && weeklyTime <= getCurrentMinute() && weeklyTime >= getMinimalMinute()
+        )
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isCurrentSeason) {
+        if (!isCurrentSeason) return@LaunchedEffect
         if (isOver) return@LaunchedEffect
         if (weeklyTime <= getMinimalMinute()) return@LaunchedEffect
 

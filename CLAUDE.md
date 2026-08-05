@@ -48,8 +48,11 @@ Every index, offset and character count above is positional and unversioned. Whe
 back wrong, assume the upstream page changed before looking for a bug in the callers — the `Log.d`
 line after each cleaning stage is there to show which step drifted.
 
-Nothing caches and nothing catches. A decode failure escapes `viewModelScope` in
-`MainViewModel.load`, which crashes the app, and leaves `isLoading` stuck true on the way out.
+Nothing caches, but `MainViewModel.load` now catches: a decode failure lands in an `error` flow and
+the screen offers a retry, rather than escaping `viewModelScope` and taking the app with it. That
+matters because the season picker puts a page the site never published one tap away.
+`CancellationException` is rethrown, and `isLoading` is cleared on every path except a cancelled
+load, which leaves the flag to the load replacing it.
 
 `source/Parser.kt` mirrors the upstream record and is deliberately forgiving — unknown keys ignored,
 optional fields defaulted — so a *new* upstream field is harmless while a renamed required one
@@ -58,37 +61,44 @@ throws at decode time.
 `AnimeSource` is the seam for a second provider, but `MainViewModel` names `YourAnimesSource`
 directly, so swapping sources means editing the ViewModel.
 
-### Airing times are minutes-since-Sunday
+### Airing times are minutes-since-Monday
 
 A single integer space carries every time comparison:
 
-- `Week.weekNumber` runs `SUNDAY = 0` through `SATURDAY = 6`.
-- `AnimeInformation.timeInDay` is the upstream `_weekMinutes` — minutes past midnight.
-- `getWeeklyTime() = weekNumber * 1440 + timeInDay` places a title in the week; `getMinimalMinute()`
-  and `getCurrentMinute()` place "start of today" and "now" in the same space.
+- `WeekTime.week` is a `java.time.DayOfWeek`, so `MONDAY = 1` through `SUNDAY = 7`.
+- `WeekTime.minute` is minutes past midnight, and `toZone` re-anchors both to another zone by
+  walking back to the week's Monday, so a title crossing midnight also changes weekday.
+- `WeekTime.minuteOfWeek = (week.value - 1) * 1440 + minute` places a title in the week;
+  `getMinimalMinute()` and `getCurrentMinute()` place "start of today" and "now" in the same space.
+
+The subtraction is what makes the space Monday-based. `getMinimalMinute()` reads
+`dayOfWeek.value - 1` for the same reason — it used to step the enum back a day and read *that*
+day's value, which is one lower every day but Monday, where it wrapped to Sunday's `7` and put the
+start of today past the end of the week. Nothing tinted on Mondays.
 
 `AnimeCard` compares those to tint a row that has already aired, and schedules a `delay` for the
 remainder so a row flips while the list is open. Touching any of the three functions moves both the
-sort order and that tint.
+sort order and that tint. The tint is also gated on `isCurrentSeason`, since a row carries a weekday
+and a time but no date — in any other season the comparison describes today rather than the title.
 
-`getTodayOrder()` is separate and rotates the day *list* so the schedule opens on today, keyed on
-`java.time.DayOfWeek` values (`MONDAY = 1`) rather than `weekNumber`. Two numberings coexist — check
-which one a function speaks before reusing an index.
+`getTodayOrder()` is separate and rotates the day *list* so the schedule opens on today. It shares
+`DayOfWeek`'s numbering but rotates a list that starts at Sunday, so its index is not `minuteOfWeek`'s
+— check which one a function speaks before reusing an index.
 
-### Season maths exists three times over, and one copy is wrong
+### Season maths lives in one place, and the ranges are one-based
 
-- `getCurrentSessionString()` maps a **zero-based** `Calendar.MONTH` onto the `"YYYYMM"` request
-  path. Correct.
-- `Season.fromMonth()` matches on **zero-based** ranges too (`in 0..2 -> WINTER`), but
-  `getCurrentSession()` hands it `Calendar.MONTH + 1`. March, June and September therefore resolve
-  to the following season, and **December arrives as `12` and hits `error("Invalid month")`** —
-  crashing the initial load in `MainViewModel.init` and throwing straight out of the pull-to-refresh
-  callback.
-- `Endpoint.fetchList` carries a `getCurrentSessionString()` default that is never used, since
-  `load` always passes the path it built from `season.month`.
+`AnilistSeason.fromMonth()` matches `in 1..3 -> WINTER` through `in 10..12 -> FALL`, agreeing with
+`java.time.LocalDate.monthValue` and with `AnilistSeason.month`. It is reached through
+`AnilistSeasonYear.of(date)`, which `current()` calls with today.
 
-Fix the disagreement between `fromMonth`'s ranges and what `getCurrentSession` passes it, rather
-than patching a caller.
+The ranges were zero-based while every caller passed a one-based month, which put March, June and
+September a season late and left December hitting `error("Invalid month")` — crashing the first
+load. Two rival copies of this maths are gone with it: `getCurrentSessionString()` and the
+`Endpoint.fetchList` default that called it. Keep it that way; a second copy is how the first one
+drifted. `AnilistSeasonTest` pins all twelve months, and `AnilistSeasonYear.of` takes a date rather
+than reading the clock so those months can be tested at all.
+
+`AnilistSeasonYear.EARLIEST` and `latest()` bound what the season picker will step to.
 
 ### Favourites are one flow, hoisted the whole way up
 
@@ -99,7 +109,16 @@ drop it out of a filtered list on the spot. `showFavoritesOnly` lives in `MainAc
 button that flips it sits in the app bar while the list it filters sits below — the activity is the
 nearest thing owning both.
 
-Hold new state the same way: components report, callers own.
+The selected season splits along the same seam but does not land in the same place. Only
+`isPickerOpen` is the activity's; the season itself is `MainViewModel.selected`, because it is what
+the load is addressed by — a copy held beside the app bar's chip could name one season while the
+list below still held another. `MainActivity` therefore takes the view model and hands it to both
+`AnimeScheduleScreen` and the bar, and pull-to-refresh calls `reload()` rather than working the
+season out again, which is how it used to snap back to today's. `reload()` cancels whatever is in
+flight first, or stepping through the picker lets a slow earlier response land last.
+
+Hold new state the same way: components report, callers own. Which caller depends on what the state
+is an input to, not on where the control sits.
 
 ## Conventions
 

@@ -7,11 +7,11 @@ import java.time.temporal.TemporalAdjusters
 
 data class WeekTime(
     val week: DayOfWeek,
-    val minute: Int,
+    val minute: Int?,
     val zone: ZoneId = ZoneId.systemDefault(),
 ) {
     val minuteOfWeek: Int
-        get() = (week.value - 1) * 1440 + minute
+        get() = if (minute != null) (week.value - 1) * 1440 + minute else -1
 
     init {
         require(minute in 0..1439) { "Minute must be between 0 and 1439" }
@@ -21,6 +21,8 @@ data class WeekTime(
         targetZone: ZoneId,
         referenceDate: LocalDate
     ): WeekTime {
+        if (minute == null) return WeekTime(week, null, targetZone)
+
         val hour = minute / 60
         val minuteOfHour = minute % 60
 

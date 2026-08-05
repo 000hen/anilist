@@ -9,7 +9,6 @@ import kotlinx.serialization.json.jsonObject
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSeason
 import one.muisnowdevs.apps.anilist.source.AnimeSource
-import one.muisnowdevs.apps.anilist.source.getCurrentSessionString
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
@@ -22,7 +21,7 @@ private const val TAG = "YourAnimesSource"
 object YourAnimesSource : AnimeSource {
     private interface Endpoint {
         @GET("/bangumi/{time}")
-        suspend fun fetchList(@Path("time") time: String = getCurrentSessionString()): String
+        suspend fun fetchList(@Path("time") time: String): String
     }
 
     private val json = Json { ignoreUnknownKeys = true }

@@ -6,10 +6,10 @@ import java.time.LocalDate
 import kotlin.time.Duration.Companion.minutes
 
 /** Renders "minutes past midnight" as the `@HH:mm` badge shown next to a title. */
-fun formatTimeInDay(minutesInDay: Int): String =
-    minutesInDay.minutes.toComponents { hour, minute, _, _ ->
+fun formatTimeInDay(minutesInDay: Int?): String =
+    minutesInDay?.minutes?.toComponents { hour, minute, _, _ ->
         "@${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-    }
+    } ?: "時間未定"
 
 fun <T> List<T>.rotate(startIndex: Int): List<T> {
     require(isNotEmpty())

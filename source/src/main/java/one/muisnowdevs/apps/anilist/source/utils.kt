@@ -1,34 +1,16 @@
 package one.muisnowdevs.apps.anilist.source
 
 import java.time.LocalDate
-import java.time.Year
 import java.util.Calendar
 
-fun getCurrentSeason(): Pair<Year, AnilistSeason> {
-    val year = Year.now()
-    val month = LocalDate.now().monthValue
-
-    return year to AnilistSeason.fromMonth(month)
-}
-
-fun getCurrentSessionString(): String {
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH)
-
-    return when (month) {
-        in 0..2 -> "${year}01"
-        in 3..5 -> "${year}04"
-        in 6..8 -> "${year}07"
-        in 9..11 -> "${year}10"
-        else -> error("Invalid month")
-    }
-}
-
-fun getMinimalMinute(): Int {
-    val week = LocalDate.now().dayOfWeek - 1
-    return week.value * 1440
-}
+/**
+ * Start of today in the same minutes-since-Monday space as [WeekTime.minuteOfWeek].
+ *
+ * Reads the day's own value rather than stepping the enum back a day: `dayOfWeek - 1` gives the
+ * previous day, whose value is one lower every day but Monday, where it wraps to Sunday's 7 and
+ * puts the start of today past the end of the week. Nothing was ever counted as aired on a Monday.
+ */
+fun getMinimalMinute(): Int = (LocalDate.now().dayOfWeek.value - 1) * 1440
 
 fun getCurrentMinute(): Int {
     val calendar = Calendar.getInstance()

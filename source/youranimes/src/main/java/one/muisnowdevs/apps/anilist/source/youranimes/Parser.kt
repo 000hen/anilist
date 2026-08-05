@@ -33,14 +33,14 @@ data class AnimeInformation(
     @Serializable(with = YourAnimesWeekConverter::class)
     val dayOfWeek: DayOfWeek,
 
-    val description: String,
+    val description: String = "",
     val durationDesc: String? = null,
     val enableVoting: Boolean,
     val episode: String,
     val favorability: Favorability,
     val hasNews: Boolean,
     val isFavorite: Boolean,
-    val jpName: String,
+    val jpName: String? = null,
     val name: String,
     val newsDate: String,
     val olinks: List<SocialLink>,
