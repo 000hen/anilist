@@ -38,7 +38,7 @@ object YourAnimesWeekConverter : KSerializer<DayOfWeek?> {
         val element = input.decodeJsonElement() as? JsonPrimitive ?: return null
 
         val intWeek = element.intOrNull ?: return null
-        if (intWeek !in 1..7) return null
+        if (intWeek !in 0..6) return null
 
         return DayOfWeek.of((intWeek + 6) % 7 + 1)
     }
