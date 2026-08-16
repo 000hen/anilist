@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
@@ -11,6 +12,8 @@ import one.muisnowdevs.apps.anilist.source.AnilistSeason
 import one.muisnowdevs.apps.anilist.source.AnimeSource
 import one.muisnowdevs.apps.anilist.source.ScheduleDay
 import one.muisnowdevs.apps.anilist.source.WeekTime
+import one.muisnowdevs.apps.anilist.source.reportTimeElapsed
+import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
@@ -31,37 +34,61 @@ object YourAnimesSource : AnimeSource {
         .addConverterFactory(ScalarsConverterFactory.create())
         .build()
     private val service = client.create(Endpoint::class.java)
+    private fun String.extractNextF(): List<String> =
+        Jsoup.parse(this)
+            .select("script")
+            .asSequence()
+            .map { it.data().trim() }
+            .filter { it.startsWith("self.__next_f.push(") }
+            .map {
+                it.removePrefix("self.__next_f.push(")
+                    .removeSuffix(")")
+            }
+            .toList()
 
-    private suspend fun loadRaw(path: String): String = withContext(Dispatchers.Default) {
-        val raw = service.fetchList(path)
+    private suspend fun loadRaw(path: String): List<AnimeInformation> =
+        withContext(Dispatchers.Default) {
+            val raw = reportTimeElapsed { service.fetchList(path) }
 
-        val startLast = raw.lastIndexOf("<script>self.__next_f.push")
-        val start = raw.lastIndexOf("<script>self.__next_f.push", startLast - 1)
-        val end = raw.indexOf("</script>", start)
-        val content = raw
-            .substring(start, end)
-            .replace("<script>self.__next_f.push(", "")
-            .dropLast(1)
+            val content = reportTimeElapsed {
+                val nextF = raw.extractNextF()
+                nextF.firstOrNull { content -> content.contains("{\\\"animes\\\":[") }
+                    ?: error("Invalid format")
+            }
 
-        Log.d(TAG, "first clean: ${content.take(100)}...")
+            Log.d(TAG, "first clean: ${content.take(100)}...${content.takeLast(100)}")
 
-        val rawList = Json.parseToJsonElement(content).jsonArray[1].toString()
-        Log.d(TAG, "second clean: ${rawList.take(100)}...")
+            val rawList = Json.parseToJsonElement(content).jsonArray[1].toString()
+            Log.d(TAG, "second clean: ${rawList.take(100)}...${rawList.takeLast(100)}")
 
-        val cleaned = rawList.drop(rawList.indexOf(':') + 1)
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\")
-            .dropLast(3)
-        Log.d(TAG, "third clean: ${cleaned.take(100)}...")
+            val cleaned = rawList.drop(rawList.indexOf(':') + 1)
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\")
+                .dropLast(3)
+            Log.d(TAG, "third clean: ${cleaned.take(100)}...${cleaned.takeLast(100)}")
 
-        val contentInner = Json.parseToJsonElement(cleaned)
-            .jsonArray[3]
-            .jsonObject["children"]
-            ?.jsonArray[2]
-            ?.jsonArray[3]
-            ?.jsonObject["animes"] ?: error("Invalid JSON")
+            val inner = Json.parseToJsonElement(cleaned).jsonArray[3]
 
-        return@withContext contentInner.toString()
+            val animes = inner.jsonObject["animes"] ?: error("Invalid JSON")
+            val structured = json.decodeFromJsonElement<List<AnimeInformation>>(animes)
+
+            val streamingRaw = inner.jsonObject["nameMap"]
+            val streamingMap =
+                if (streamingRaw == null) emptyMap()
+                else json.decodeFromJsonElement<Map<String, String>>(streamingRaw)
+
+            val final = structured.map { item ->
+                item.copy(
+                    streaming = item.streaming.map { it.resolveVendor(streamingMap) }
+                )
+            }
+
+            return@withContext final
+        }
+
+    private fun Streaming.resolveVendor(vendors: Map<String, String>): Streaming {
+        val newVendor = vendors[vendor] ?: return this
+        return copy(vendorLocalName = newVendor)
     }
 
     override suspend fun list(
@@ -71,8 +98,7 @@ object YourAnimesSource : AnimeSource {
         val path = "${year.value}${season.month.toString().padStart(2, '0')}"
         val raw = loadRaw(path)
 
-        val list = json.decodeFromString<List<AnimeInformation>>(raw)
-        return list
+        return raw
             .map { it.toAnilistAnime() }
             .sortedWith(compareBy(nullsLast(WeekTime.AIRING_ORDER)) { it.onAirTime })
             .groupBy { ScheduleDay.of(it.onAirTime?.week) }

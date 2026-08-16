@@ -80,7 +80,7 @@ data class AnimeInformation(
         genres = tags.keys.toList(),
         streaming = (streaming + adultstreaming).toSet().map { stream ->
             AnilistStreaming(
-                stream.vendor,
+                stream.vendorLocalName,
                 stream.url,
                 "$VENDOR_ICON_BASE_URL/${stream.vendor}_icon.webp"
             )
@@ -140,6 +140,7 @@ data class Streaming(
     val title: String,
     val url: String,
     val vendor: String,
+    val vendorLocalName: String = vendor,
     val hasZhCnSubtitle: Boolean? = null,
     val hasZhHkSubtitle: Boolean? = null,
     val adUrl: String? = null,

@@ -36,4 +36,5 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.scalars)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.jsoup)
 }
