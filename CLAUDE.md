@@ -20,8 +20,11 @@ Run from the repository root — `gradlew.bat` from PowerShell, `./gradlew` from
 R8 keep rules go in `app/src/main/keepRules/`; the build merges every file in that directory and
 there is no `proguard-rules.pro`.
 
-No signing config is declared, so `assembleRelease` lands an **unsigned** `app-release-unsigned.apk`
-under `app/build/outputs/apk/release/` and never touches the checked-in, signed
+The GitHub release workflow passes `-PreleasePerAbi=true` to split release builds into `arm64-v8a`,
+`armeabi-v7a`, `x86`, and `x86_64` APKs with no universal APK; omitting that property preserves the
+single-APK local/debug behavior. Releases remain unsigned unless all four `RELEASE_*` signing
+environment variables are present; the workflow supplies those from repository secrets.
+`assembleRelease` writes only under `app/build/outputs/apk/release/` and never touches the signed
 `app/release/app-release.apk`. That committed copy and its baseline profiles come from the IDE's
 signed-build wizard, which is why they show up as working-tree changes.
 

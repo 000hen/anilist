@@ -15,15 +15,21 @@ flips over on its own while you are looking at the list.
 
 ## Installation
 
-Download `app-release.apk` from the [latest release](/releases/latest) and open it on the
-device, allowing installation from your browser or file manager when Android asks. Android 8.0 or
-newer is required.
+Download the APK for your device from the [latest release](/releases/latest), then open it and allow
+installation from your browser or file manager when Android asks. Android 8.0 or newer is required.
+
+- `anilist-arm64-v8a.apk` — most current Android phones and tablets
+- `anilist-armeabi-v7a.apk` — older 32-bit ARM devices
+- `anilist-x86_64.apk` or `anilist-x86.apk` — Intel devices and emulators
+
+Each release also includes `SHA256SUMS.txt`. From the directory containing the downloaded files,
+verify them with `sha256sum --check SHA256SUMS.txt`.
 
 Building it yourself works too — see below.
 
 ## Development
 
-You will need the Android SDK and a JDK 11 or newer; installing Android Studio gets you both.
+You will need the Android SDK and JDK 21; installing Android Studio gets you both.
 
 Clone the repository, then tell the build where your SDK lives by creating `local.properties` in the
 project root:
@@ -46,8 +52,34 @@ Open the project in Android Studio and run it, or drive the build from the comma
 The app needs a network connection to load anything, so an emulator or device without one shows an
 empty week.
 
-`./gradlew assembleRelease` produces an unsigned APK under `app/build/outputs/apk/release/`. Signing
-it is left to Android Studio's *Build → Generate Signed App Bundle / APK*.
+`./gradlew assembleRelease -PreleasePerAbi=true` produces four unsigned, architecture-specific APKs
+under `app/build/outputs/apk/release/`; without that property, local builds retain the conventional
+single APK. To sign the output, provide all four environment variables below and run the build with
+`--no-configuration-cache`:
+
+- `RELEASE_KEYSTORE_FILE`
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
+
+Publishing a GitHub Release runs `.github/workflows/release.yml`, signs the four APKs, verifies
+their
+signatures, creates `SHA256SUMS.txt`, and attaches all five files to that release. Configure these
+repository secrets first:
+
+- `RELEASE_KEYSTORE_BASE64` — the complete keystore encoded as Base64
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
+
+On PowerShell, create the Base64 value with:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("release.keystore"))
+```
+
+Keep using the same signing certificate for every release; Android will reject an APK signed with a
+different certificate as an update to an installed copy.
 
 ## License
 
