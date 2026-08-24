@@ -19,6 +19,7 @@ import kotlinx.serialization.json.intOrNull
  * carry a marker in *both* fields, so leaving this one strict would have kept the decode failing
  * for exactly the titles the nullable weekday was added to admit.
  */
+@Deprecated("Use [YourAnimesNextEpisodeConverter] instead")
 object YourAnimesMinuteConverter : KSerializer<Int?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("WeekMinutes", PrimitiveKind.INT).nullable

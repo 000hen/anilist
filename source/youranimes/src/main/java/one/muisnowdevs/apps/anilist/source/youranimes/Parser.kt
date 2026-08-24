@@ -6,7 +6,7 @@ import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSite
 import one.muisnowdevs.apps.anilist.source.AnilistStreaming
 import one.muisnowdevs.apps.anilist.source.WeekTime
-import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesMinuteConverter
+import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesDateToTimeConverter
 import one.muisnowdevs.apps.anilist.source.youranimes.converter.YourAnimesWeekConverter
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -28,7 +28,6 @@ data class AnimeInformation(
     val copyright: String? = null,
     val cover: String,
     val cross: Boolean,
-    val date: String,
 
     @Serializable(with = YourAnimesWeekConverter::class)
     val dayOfWeek: DayOfWeek? = null,
@@ -58,8 +57,8 @@ data class AnimeInformation(
     val twAgent: String,
     val updatedTimestamp: String,
 
-    @SerialName("_weekMinutes")
-    @Serializable(with = YourAnimesMinuteConverter::class)
+    @SerialName("date")
+    @Serializable(with = YourAnimesDateToTimeConverter::class)
     val timeInDay: Int? = null
 ) {
     fun toAnilistAnime(): AnilistAnime = AnilistAnime(
@@ -67,7 +66,7 @@ data class AnimeInformation(
         onAirTime = dayOfWeek?.let { week ->
             WeekTime(
                 week,
-                timeInDay?.rem(1440),
+                timeInDay,
                 ZoneId.of("Asia/Tokyo")
             ).toZone(ZoneId.systemDefault(), LocalDate.now())
         },
