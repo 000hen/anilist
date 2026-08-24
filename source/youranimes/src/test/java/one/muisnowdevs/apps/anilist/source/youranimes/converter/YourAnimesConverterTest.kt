@@ -51,6 +51,43 @@ class YourAnimesConverterTest {
     }
 
     @Test
+    fun dateTime_readsTheTimeAsMinutesSinceMidnight() {
+        val cases = listOf(
+            "2026-07-05 01:30" to "01:30",
+            "2026-07-12 02:00" to "02:00",
+            "2026-07-05 02:38" to "02:38",
+            "2026-04-12 07:00" to "07:00",
+            "2026-07-12 07:00" to "07:00",
+            "2026-04-12 07:00" to "07:00",
+            "2026-04-12 07:00" to "07:00",
+            "2025-04-06 08:28" to "08:28",
+            "2026-02-01 08:30" to "08:30",
+            "2025-10-05 09:00" to "09:00",
+            "2026-07-05 16:30" to "16:30",
+            "2026-07-05 17:00" to "17:00",
+            "2026-07-05 17:30" to "17:30",
+            "2026-07-05 22:00" to "22:00",
+            "2026-07-05 22:30" to "22:30",
+            "2026-07-05 23:00" to "23:00",
+            "2026-07-05 23:15" to "23:15",
+            "2026-04-05 23:15" to "23:15",
+            "2026-04-12 23:30" to "23:30",
+            "2026-07-12 23:45" to "23:45",
+        )
+
+        for ((rawDateTime, expectedTime) in cases) {
+            val (hour, minute) = expectedTime.split(':').map(String::toInt)
+            val expectedMinutes = hour * 60 + minute
+
+            assertEquals(
+                rawDateTime,
+                expectedMinutes,
+                Json.decodeFromString(YourAnimesDateToTimeConverter, "\"$rawDateTime\""),
+            )
+        }
+    }
+
+    @Test
     fun minute_readsTheNumberItIsGiven() {
         assertEquals(1410, Json.decodeFromString(YourAnimesMinuteConverter, "1410"))
         assertEquals(0, Json.decodeFromString(YourAnimesMinuteConverter, "0"))
