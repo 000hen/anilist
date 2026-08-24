@@ -1,0 +1,219 @@
+name: Build release APKs
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.id }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, verify, and upload APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the released tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Java 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install Android SDK platform 37.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -d "${ANDROID_SDK_ROOT}/platforms/android-37.1" ]]; then
+            sdkmanager --install "platforms;android-37.1"
+          fi
+          test -d "${ANDROID_SDK_ROOT}/platforms/android-37.1"
+
+      - name: Decode and validate signing key
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release-signing.keystore
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in \
+            RELEASE_KEYSTORE_BASE64 \
+            RELEASE_STORE_PASSWORD \
+            RELEASE_KEY_ALIAS \
+            RELEASE_KEY_PASSWORD
+          do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "Required signing secret is not configured: ${secret_name}" >&2
+              exit 1
+            fi
+          done
+
+          umask 077
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RELEASE_KEYSTORE_FILE"
+          test -s "$RELEASE_KEYSTORE_FILE"
+          keytool -list \
+            -keystore "$RELEASE_KEYSTORE_FILE" \
+            -storepass:env RELEASE_STORE_PASSWORD \
+            -alias "$RELEASE_KEY_ALIAS" > /dev/null
+
+      - name: Build signed release APKs
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release-signing.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        # Signing passwords are build-model inputs, so do not serialize them into a configuration cache.
+        run: bash ./gradlew --no-daemon --no-configuration-cache -PreleasePerAbi=true clean assembleRelease
+
+      - name: Remove signing key
+        if: ${{ always() }}
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release-signing.keystore
+        run: rm -f -- "$RELEASE_KEYSTORE_FILE"
+
+      - name: Verify and stage release assets
+        id: assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          output_dir="app/build/outputs/apk/release"
+          metadata="${output_dir}/output-metadata.json"
+          asset_dir="${RUNNER_TEMP}/release-assets"
+          expected_abis=(arm64-v8a armeabi-v7a x86 x86_64)
+
+          test -f "$metadata"
+          mkdir -p "$asset_dir"
+
+          mapfile -t built_apks < <(find "$output_dir" -maxdepth 1 -type f -name '*.apk' -print)
+          if [[ "${#built_apks[@]}" -ne 4 ]]; then
+            echo "Expected exactly four release APKs and no universal APK; found ${#built_apks[@]}." >&2
+            exit 1
+          fi
+
+          jq -e '
+            (.elements | length) == 4 and
+            all(.elements[];
+              (.filters | length) == 1 and
+              .filters[0].filterType == "ABI"
+            )
+          ' "$metadata" > /dev/null
+
+          actual_abis="$(jq -r '.elements[].filters[0].value' "$metadata" | LC_ALL=C sort)"
+          expected_abis_sorted="$(printf '%s\n' "${expected_abis[@]}" | LC_ALL=C sort)"
+          if [[ "$actual_abis" != "$expected_abis_sorted" ]]; then
+            echo "Release outputs do not contain exactly the required ABI filters." >&2
+            exit 1
+          fi
+
+          apksigner_path="$(find "${ANDROID_SDK_ROOT}/build-tools" -maxdepth 2 -type f -name apksigner -print | sort -V | tail -n 1)"
+          if [[ -z "$apksigner_path" ]]; then
+            echo "Unable to locate apksigner in the Android SDK." >&2
+            exit 1
+          fi
+
+          signer_digest=""
+          for abi in "${expected_abis[@]}"; do
+            output_file="$(jq -er --arg abi "$abi" '
+              [
+                .elements[] |
+                select(
+                  (.filters | length) == 1 and
+                  .filters[0].filterType == "ABI" and
+                  .filters[0].value == $abi
+                ) |
+                .outputFile
+              ] |
+              if length == 1 then .[0] else error("ABI output is not unique") end
+            ' "$metadata")"
+
+            if [[ "$output_file" != "$(basename -- "$output_file")" ]]; then
+              echo "Unsafe APK filename in output metadata." >&2
+              exit 1
+            fi
+
+            source_apk="${output_dir}/${output_file}"
+            test -f "$source_apk"
+
+            verify_output="$(
+              "$apksigner_path" verify \
+                --verbose \
+                --print-certs \
+                --min-sdk-version 26 \
+                "$source_apk"
+            )"
+            apk_signer_digest="$(
+              awk -F': ' '/certificate SHA-256 digest:/ { print $2; exit }' \
+                <<< "$verify_output"
+            )"
+            if [[ -z "$apk_signer_digest" ]]; then
+              echo "Could not read the signing certificate digest for ${output_file}." >&2
+              exit 1
+            fi
+            if [[ -z "$signer_digest" ]]; then
+              signer_digest="$apk_signer_digest"
+            elif [[ "$apk_signer_digest" != "$signer_digest" ]]; then
+              echo "Release APKs are not signed by the same certificate." >&2
+              exit 1
+            fi
+
+            mapfile -t packaged_abis < <(
+              unzip -Z1 "$source_apk" |
+                awk -F/ '$1 == "lib" && NF >= 3 { print $2 }' |
+                LC_ALL=C sort -u
+            )
+            if [[ "${#packaged_abis[@]}" -ne 1 || "${packaged_abis[0]:-}" != "$abi" ]]; then
+              echo "${output_file} does not contain exactly the expected ${abi} native libraries." >&2
+              exit 1
+            fi
+
+            asset_name="anilist-${abi}.apk"
+            cp -- "$source_apk" "${asset_dir}/${asset_name}"
+            echo "Verified ${asset_name}."
+          done
+
+          (
+            cd "$asset_dir"
+            sha256sum \
+              anilist-arm64-v8a.apk \
+              anilist-armeabi-v7a.apk \
+              anilist-x86.apk \
+              anilist-x86_64.apk > SHA256SUMS.txt
+            sha256sum --check SHA256SUMS.txt
+          )
+
+          echo "directory=${asset_dir}" >> "$GITHUB_OUTPUT"
+
+      - name: Attach APKs and checksums to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_ASSET_DIR: ${{ steps.assets.outputs.directory }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" \
+            "$RELEASE_ASSET_DIR/anilist-arm64-v8a.apk" \
+            "$RELEASE_ASSET_DIR/anilist-armeabi-v7a.apk" \
+            "$RELEASE_ASSET_DIR/anilist-x86.apk" \
+            "$RELEASE_ASSET_DIR/anilist-x86_64.apk" \
+            "$RELEASE_ASSET_DIR/SHA256SUMS.txt" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
