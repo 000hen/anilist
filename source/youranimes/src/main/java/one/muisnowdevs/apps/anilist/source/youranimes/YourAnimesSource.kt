@@ -1,106 +1,122 @@
 package one.muisnowdevs.apps.anilist.source.youranimes
 
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import one.muisnowdevs.apps.anilist.source.AnilistAnime
 import one.muisnowdevs.apps.anilist.source.AnilistSeason
+import one.muisnowdevs.apps.anilist.source.AnilistSite
+import one.muisnowdevs.apps.anilist.source.AnilistStreaming
 import one.muisnowdevs.apps.anilist.source.AnimeSource
 import one.muisnowdevs.apps.anilist.source.ScheduleDay
 import one.muisnowdevs.apps.anilist.source.WeekTime
-import one.muisnowdevs.apps.anilist.source.reportTimeElapsed
-import org.jsoup.Jsoup
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
+import uniffi.anilist.NativeAnimeParser
+import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.Year
-
-private const val TAG = "YourAnimesSource"
+import java.time.ZoneId
+import uniffi.anilist.Anime as RustAnime
+import uniffi.anilist.Weekday as RustWeekday
 
 object YourAnimesSource : AnimeSource {
     private interface Endpoint {
         @GET("/bangumi/{time}")
-        suspend fun fetchList(@Path("time") time: String): String
+        suspend fun fetchList(
+            @Path("time") time: String,
+        ): String
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
-    private val client = Retrofit.Builder()
+    private val service = Retrofit.Builder()
         .baseUrl("https://youranimes.tw")
         .addConverterFactory(ScalarsConverterFactory.create())
         .build()
-    private val service = client.create(Endpoint::class.java)
-    private fun String.extractNextF(): List<String> =
-        Jsoup.parse(this)
-            .select("script")
-            .asSequence()
-            .map { it.data().trim() }
-            .filter { it.startsWith("self.__next_f.push(") }
-            .map {
-                it.removePrefix("self.__next_f.push(")
-                    .removeSuffix(")")
-            }
-            .toList()
+        .create(Endpoint::class.java)
 
-    private suspend fun loadRaw(path: String): List<AnimeInformation> =
-        withContext(Dispatchers.Default) {
-            val raw = reportTimeElapsed { service.fetchList(path) }
-
-            val content = reportTimeElapsed {
-                val nextF = raw.extractNextF()
-                nextF.firstOrNull { content -> content.contains("{\\\"animes\\\":[") }
-                    ?: error("Invalid format")
-            }
-
-            Log.d(TAG, "first clean: ${content.take(100)}...${content.takeLast(100)}")
-
-            val rawList = Json.parseToJsonElement(content).jsonArray[1].toString()
-            Log.d(TAG, "second clean: ${rawList.take(100)}...${rawList.takeLast(100)}")
-
-            val cleaned = rawList.drop(rawList.indexOf(':') + 1)
-                .replace("\\\"", "\"")
-                .replace("\\\\", "\\")
-                .dropLast(3)
-            Log.d(TAG, "third clean: ${cleaned.take(100)}...${cleaned.takeLast(100)}")
-
-            val inner = Json.parseToJsonElement(cleaned).jsonArray[3]
-
-            val animes = inner.jsonObject["animes"] ?: error("Invalid JSON")
-            val structured = json.decodeFromJsonElement<List<AnimeInformation>>(animes)
-
-            val streamingRaw = inner.jsonObject["nameMap"]
-            val streamingMap =
-                if (streamingRaw == null) emptyMap()
-                else json.decodeFromJsonElement<Map<String, String>>(streamingRaw)
-
-            val final = structured.map { item ->
-                item.copy(
-                    streaming = item.streaming.map { it.resolveVendor(streamingMap) }
-                )
-            }
-
-            return@withContext final
-        }
-
-    private fun Streaming.resolveVendor(vendors: Map<String, String>): Streaming {
-        val newVendor = vendors[vendor] ?: return this
-        return copy(vendorLocalName = newVendor)
+    private val parser by lazy {
+        NativeAnimeParser("youranimes")
     }
 
     override suspend fun list(
         year: Year,
-        season: AnilistSeason
+        season: AnilistSeason,
     ): Map<ScheduleDay, List<AnilistAnime>> {
-        val path = "${year.value}${season.month.toString().padStart(2, '0')}"
-        val raw = loadRaw(path)
+        val path = buildString {
+            append(year.value)
+            append(season.month.toString().padStart(2, '0'))
+        }
 
-        return raw
-            .map { it.toAnilistAnime() }
-            .sortedWith(compareBy(nullsLast(WeekTime.AIRING_ORDER)) { it.onAirTime })
+        val body = service.fetchList(path)
+        val parsed = withContext(Dispatchers.Default) { parser.parseList(body) }
+
+        val targetZone = ZoneId.systemDefault()
+        val referenceDate = LocalDate.now()
+
+        return parsed
+            .map { anime ->
+                anime.toDomain(
+                    targetZone = targetZone,
+                    referenceDate = referenceDate,
+                )
+            }
+            .sortedWith(
+                compareBy(nullsLast(WeekTime.AIRING_ORDER)) {
+                    it.onAirTime
+                }
+            )
             .groupBy { ScheduleDay.of(it.onAirTime?.week) }
     }
+}
+
+private fun RustAnime.toDomain(
+    targetZone: ZoneId,
+    referenceDate: LocalDate,
+): AnilistAnime = AnilistAnime(
+    id = id,
+    name = name,
+    description = description,
+
+    onAirTime = onAirTime?.let { time ->
+        WeekTime(
+            week = time.week.toDayOfWeek(),
+            minute = time.minute?.value?.toInt(),
+            zone = ZoneId.of(time.zone),
+        ).toZone(
+            targetZone = targetZone,
+            referenceDate = referenceDate,
+        )
+    },
+
+    isAdult = isAdult,
+    image = image,
+    banner = banner,
+    cast = cast,
+    genres = genres,
+
+    streaming = streaming.map { stream ->
+        AnilistStreaming(
+            name = stream.name,
+            url = stream.url,
+            logo = stream.logo,
+        )
+    },
+
+    site = sites.map { site ->
+        AnilistSite(
+            title = site.title,
+            url = site.url,
+        )
+    },
+)
+
+private fun RustWeekday.toDayOfWeek(): DayOfWeek = when (this) {
+    RustWeekday.MONDAY -> DayOfWeek.MONDAY
+    RustWeekday.TUESDAY -> DayOfWeek.TUESDAY
+    RustWeekday.WEDNESDAY -> DayOfWeek.WEDNESDAY
+    RustWeekday.THURSDAY -> DayOfWeek.THURSDAY
+    RustWeekday.FRIDAY -> DayOfWeek.FRIDAY
+    RustWeekday.SATURDAY -> DayOfWeek.SATURDAY
+    RustWeekday.SUNDAY -> DayOfWeek.SUNDAY
 }
