@@ -32,14 +32,25 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Install Android SDK platform 37.1
+      - name: Install Android SDK packages
         shell: bash
         run: |
           set -euo pipefail
+
+          sdkmanager="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+
+          test -x "$sdkmanager"
+
           if [[ ! -d "${ANDROID_SDK_ROOT}/platforms/android-37.1" ]]; then
-            sdkmanager --install "platforms;android-37.1"
+            "$sdkmanager" --install "platforms;android-37.1"
           fi
+
+          if [[ ! -d "${ANDROID_SDK_ROOT}/ndk/30.0.16248370" ]]; then
+            "$sdkmanager" --install "ndk;30.0.16248370"
+          fi
+
           test -d "${ANDROID_SDK_ROOT}/platforms/android-37.1"
+          test -d "${ANDROID_SDK_ROOT}/ndk/30.0.16248370"
 
       - name: Decode and validate signing key
         shell: bash
@@ -83,9 +94,6 @@ jobs:
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked
-
-      - name: Install Android NDK
-        run: sdkmanager --install "ndk;30.0.16248370"
 
       - name: Build signed release APKs
         shell: bash
