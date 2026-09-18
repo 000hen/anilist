@@ -33,8 +33,8 @@ android {
         applicationId = "one.muisnowdevs.apps.anilist"
         minSdk = 26
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.1.2"
+        versionCode = 7
+        versionName = "1.1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
