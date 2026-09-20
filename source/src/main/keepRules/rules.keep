@@ -10,3 +10,15 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# JNA accesses its Java classes and fields from native code.
+-keep class com.sun.jna.** { *; }
+
+# UniFFI-generated JNA structures are accessed reflectively/native-side.
+-keep class * extends com.sun.jna.Structure { *; }
+
+# Callbacks may be invoked from native code.
+-keep class * implements com.sun.jna.Callback { *; }
+-keep interface * extends com.sun.jna.Callback { *; }
+
+-dontwarn java.awt.**

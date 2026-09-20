@@ -16,12 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import one.muisnowdevs.apps.anilist.source.AnilistAnime
+import uniffi.anilist.Anime
 
 /** Full detail of a single title: artwork, where to watch it, synopsis and official links. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnimeDetailSheet(anime: AnilistAnime, onDismissRequest: () -> Unit = {}) {
+fun AnimeDetailSheet(anime: Anime, onDismissRequest: () -> Unit = {}) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = rememberModalBottomSheetState(true)
@@ -60,7 +60,7 @@ fun AnimeDetailSheet(anime: AnilistAnime, onDismissRequest: () -> Unit = {}) {
                 )
             }
             item { Text(text = anime.description, style = MaterialTheme.typography.bodyMedium) }
-            item { OfficialLinksCard(links = anime.site) }
+            item { OfficialLinksCard(links = anime.sites) }
         }
     }
 }

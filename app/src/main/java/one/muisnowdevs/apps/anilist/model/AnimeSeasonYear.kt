@@ -1,5 +1,7 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist.model
 
+import one.muisnowdevs.apps.anilist.model.AnimeSeasonYear.Companion.current
+import uniffi.anilist.AnimeSeason
 import java.time.LocalDate
 import java.time.Year
 
@@ -10,7 +12,7 @@ import java.time.Year
  * the question of whether what is on screen is the season airing right now — so they are one value
  * rather than two parameters a call site could pair up wrongly.
  */
-data class AnilistSeasonYear(val year: Year, val season: AnilistSeason) {
+data class AnimeSeasonYear(val year: Year, val season: AnimeSeason) {
     companion object {
         /** Oldest season offered for browsing; youranimes.tw thins out below this. */
         val EARLIEST: Year = Year.of(2015)
@@ -24,11 +26,11 @@ data class AnilistSeasonYear(val year: Year, val season: AnilistSeason) {
         /**
          * Split out of [current] so the month maths can be exercised against a chosen date rather
          * than only against whatever day the suite happens to run on — which is how the ranges in
-         * [AnilistSeason.fromMonth] stayed wrong for four months of the year.
+         * [AnimeSeason.fromMonth] stayed wrong for four months of the year.
          */
         fun of(date: LocalDate) =
-            AnilistSeasonYear(Year.of(date.year), AnilistSeason.fromMonth(date.monthValue))
+            AnimeSeasonYear(Year.of(date.year), AnimeSeason.fromMonth(date.monthValue))
 
-        fun current(): AnilistSeasonYear = of(LocalDate.now())
+        fun current(): AnimeSeasonYear = of(LocalDate.now())
     }
 }

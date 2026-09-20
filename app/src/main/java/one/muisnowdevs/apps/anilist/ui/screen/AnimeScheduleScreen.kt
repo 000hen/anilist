@@ -38,15 +38,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import one.muisnowdevs.apps.anilist.AnimeFavorite
 import one.muisnowdevs.apps.anilist.getTodayOrder
-import one.muisnowdevs.apps.anilist.source.AnilistAnime
-import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
-import one.muisnowdevs.apps.anilist.source.ScheduleDay
+import one.muisnowdevs.apps.anilist.model.AnimeSeasonYear
+import one.muisnowdevs.apps.anilist.model.ScheduleDay
+import one.muisnowdevs.apps.anilist.model.ScheduledAnime
 import one.muisnowdevs.apps.anilist.ui.component.AnimeCard
 import one.muisnowdevs.apps.anilist.ui.component.AnimeDetailSheet
 import one.muisnowdevs.apps.anilist.ui.component.DayHeader
 import one.muisnowdevs.apps.anilist.ui.component.ErrorDetailSheet
 import one.muisnowdevs.apps.anilist.ui.component.SwipeToFavoriteBox
 import one.muisnowdevs.apps.anilist.viewmodel.MainViewModel
+import uniffi.anilist.Anime
 import java.time.format.TextStyle
 
 /**
@@ -79,7 +80,7 @@ fun AnimeScheduleScreen(
     // Worked out once per season rather than per row: every card asks the same question, and the
     // answer only changes when the bar above does.
     val isCurrentSeason = remember(selectedSeason) {
-        selectedSeason == AnilistSeasonYear.current()
+        selectedSeason == AnimeSeasonYear.current()
     }
 
     // A day left with nothing to show is dropped outright rather than kept as a bare header, so
@@ -90,11 +91,11 @@ fun AnimeScheduleScreen(
     val visibleSchedule = remember(schedule, favoriteIds, showFavoritesOnly) {
         if (!showFavoritesOnly) schedule
         else schedule
-            .mapValues { (_, animes) -> animes.filter { it.id in favoriteIds } }
+            .mapValues { (_, animes) -> animes.filter { it.anime.id in favoriteIds } }
             .filterValues { it.isNotEmpty() }
     }
 
-    var detailedAnime by remember { mutableStateOf<AnilistAnime?>(null) }
+    var detailedAnime by remember { mutableStateOf<Anime?>(null) }
 
     detailedAnime?.let { anime ->
         AnimeDetailSheet(anime) { detailedAnime = null }
@@ -213,9 +214,9 @@ private fun ScheduleLoadError(
  */
 @Composable
 private fun AnimeScheduleList(
-    schedule: Map<ScheduleDay, List<AnilistAnime>>,
+    schedule: Map<ScheduleDay, List<ScheduledAnime>>,
     favoriteIds: Set<String>,
-    onAnimeClick: (AnilistAnime) -> Unit,
+    onAnimeClick: (Anime) -> Unit,
     onFavoriteChange: (id: String, favorite: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     isCurrentSeason: Boolean = true
@@ -253,7 +254,8 @@ private fun AnimeScheduleList(
                 )
             }
 
-            items(animes, key = { it.id }) { anime ->
+            items(animes, key = { it.anime.id }) { scheduled ->
+                val anime = scheduled.anime
                 val isFavorite = anime.id in favoriteIds
 
                 SwipeToFavoriteBox(
@@ -265,6 +267,7 @@ private fun AnimeScheduleList(
                 ) {
                     AnimeCard(
                         anime = anime,
+                        localTime = scheduled.localTime,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { onAnimeClick(anime) },
                         isFavorite = isFavorite,

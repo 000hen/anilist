@@ -83,3 +83,15 @@ sdk.dir=/path/to/android/sdk
 ## 授權條款
 
 本專案採用 [MIT License](LICENSE) 授權。
+
+## Rust 與 Android 的分工
+
+`app` 負責 UI、季度選擇和本地時區的時間表投影；單一 `source` 模組提供 Rust 產生的
+資料模型，並透過 OkHttp 執行 `NativeAnimeSource` 建立的請求。來源網址、請求組合、
+解析與平台資料對應由 Rust 管理。共用的 `HttpRequest` 不依賴特定來源；Rust 的
+`HttpClient` 使用 reqwest，Android 使用 `OkHttpTransport`。
+
+Android 使用 `--no-default-features --features all-sources`，不包含 Rust HTTP、Tokio
+或時區資料庫。建置前需初始化 `rust/anilist-rs` submodule，安裝 Android NDK、
+`cargo-ndk` 及四種 Android Rust targets。FFI 介面變更後，請依
+[開發說明](README.en.md#development) 重新產生 Kotlin bindings。

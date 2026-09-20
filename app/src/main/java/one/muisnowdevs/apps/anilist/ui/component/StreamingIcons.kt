@@ -25,12 +25,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil.compose.SubcomposeAsyncImage
-import one.muisnowdevs.apps.anilist.source.AnilistStreaming
+import uniffi.anilist.AnimeStreaming
 
 /** Vendor badge: names the vendor on long press, opens its watch page on tap. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StreamingIcon(streaming: AnilistStreaming, modifier: Modifier = Modifier) {
+fun StreamingIcon(streaming: AnimeStreaming, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     TooltipBox(
@@ -63,7 +63,7 @@ fun StreamingIcon(streaming: AnilistStreaming, modifier: Modifier = Modifier) {
 
 /** Centred, wrapping row of [StreamingIcon]s. */
 @Composable
-fun StreamingIconRow(streamings: List<AnilistStreaming>, modifier: Modifier = Modifier) {
+fun StreamingIconRow(streamings: List<AnimeStreaming>, modifier: Modifier = Modifier) {
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),

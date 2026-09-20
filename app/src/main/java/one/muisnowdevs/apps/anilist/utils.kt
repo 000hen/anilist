@@ -1,7 +1,7 @@
 package one.muisnowdevs.apps.anilist
 
 import android.util.Log
-import one.muisnowdevs.apps.anilist.source.ScheduleDay
+import one.muisnowdevs.apps.anilist.model.ScheduleDay
 import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.minutes

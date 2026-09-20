@@ -15,8 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import one.muisnowdevs.apps.anilist.source.AnilistSeason
-import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
+import one.muisnowdevs.apps.anilist.model.AnimeSeasonYear
+import uniffi.anilist.AnimeSeason
 
 /**
  * What a season is called in the app.
@@ -24,12 +24,12 @@ import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
  * Kept here rather than in `:source` because it is copy: the source module describes when a title
  * airs, not how a reader is told about it.
  */
-internal val AnilistSeason.label: String
+internal val AnimeSeason.label: String
     get() = when (this) {
-        AnilistSeason.WINTER -> "冬季"
-        AnilistSeason.SPRING -> "春季"
-        AnilistSeason.SUMMER -> "夏季"
-        AnilistSeason.FALL -> "秋季"
+        AnimeSeason.WINTER -> "冬季"
+        AnimeSeason.SPRING -> "春季"
+        AnimeSeason.SUMMER -> "夏季"
+        AnimeSeason.FALL -> "秋季"
     }
 
 /**
@@ -43,7 +43,7 @@ internal val AnilistSeason.label: String
  */
 @Composable
 fun SeasonSelectorButton(
-    seasonYear: AnilistSeasonYear,
+    seasonYear: AnimeSeasonYear,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {

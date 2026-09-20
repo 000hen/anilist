@@ -1,4 +1,4 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist.model
 
 import java.time.DayOfWeek
 

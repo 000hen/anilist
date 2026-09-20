@@ -29,7 +29,25 @@ Building it yourself works too — see below.
 
 ## Development
 
-You will need the Android SDK and JDK 21; installing Android Studio gets you both.
+You will need the Android SDK/NDK, JDK 21, Rust, and `cargo-ndk`. Initialize the Rust
+submodule with `git submodule update --init --recursive`, then install `cargo-ndk` and the
+Rust targets for `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`,
+and `x86_64-linux-android`.
+
+`app` owns the UI, season selection, and local-time schedule projection. The single `source`
+module exposes Rust's generated models and connects `NativeAnimeSource` to Android's OkHttp
+transport. Rust owns source URLs, request construction, parsing, and vendor mapping. Its shared
+`HttpRequest` is source-independent; Rust fetchers can use the `HttpClient` implementation for
+reqwest while Android uses `OkHttpTransport`. Android builds use `--no-default-features
+--features all-sources`, excluding Rust HTTP, Tokio, and timezone databases.
+
+After changing the Rust FFI API, regenerate the checked-in Kotlin bindings from a matching
+parser-only native library (run from `rust/anilist-rs`; use `.so`/`.dylib` on Linux/macOS):
+
+```sh
+cargo build -p anilist-ffi --no-default-features --features all-sources
+cargo run -p uniffi-bindgen -- generate --library target/debug/anilist.dll --language kotlin --config ../../source/uniffi.toml --out-dir ../../source/src/main/java
+```
 
 Clone the repository, then tell the build where your SDK lives by creating `local.properties` in the
 project root:

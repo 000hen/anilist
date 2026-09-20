@@ -17,6 +17,8 @@ package uniffi.anilist
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
@@ -41,8 +43,10 @@ open class RustBuffer : Structure() {
     // When dealing with these fields, make sure to call `toULong()`.
     @JvmField
     var capacity: Long = 0
+
     @JvmField
     var len: Long = 0
+
     @JvmField
     var data: Pointer? = null
 
@@ -95,6 +99,7 @@ open class RustBuffer : Structure() {
 internal open class ForeignBytes : Structure() {
     @JvmField
     var len: Int = 0
+
     @JvmField
     var data: Pointer? = null
 
@@ -228,6 +233,7 @@ internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 internal open class UniffiRustCallStatus : Structure() {
     @JvmField
     var code: Byte = 0
+
     @JvmField
     var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
@@ -732,6 +738,9 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_anilist_checksum_func_week_order(
     ): Int
 
+    external fun uniffi_anilist_checksum_func_available_sources(
+    ): Int
+
     external fun uniffi_anilist_checksum_method_nativeanimeparser_parse_detail(
     ): Int
 
@@ -744,7 +753,31 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_anilist_checksum_method_nativeanimeparser_source_id(
     ): Int
 
+    external fun uniffi_anilist_checksum_method_nativeanimesource_detail_request(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_list_request(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_parse_detail(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_parse_list(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_parse_search(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_search_request(
+    ): Int
+
+    external fun uniffi_anilist_checksum_method_nativeanimesource_source_id(
+    ): Int
+
     external fun uniffi_anilist_checksum_constructor_nativeanimeparser_new(
+    ): Int
+
+    external fun uniffi_anilist_checksum_constructor_nativeanimesource_new(
     ): Int
 
     external fun ffi_anilist_uniffi_contract_version(
@@ -794,8 +827,55 @@ internal object UniffiLib {
         `ptr`: Long, uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
+    external fun uniffi_anilist_fn_clone_nativeanimesource(
+        `handle`: Long, uniffi_out_err: UniffiRustCallStatus,
+    ): Long
+
+    external fun uniffi_anilist_fn_free_nativeanimesource(
+        `handle`: Long, uniffi_out_err: UniffiRustCallStatus,
+    )
+
+    external fun uniffi_anilist_fn_constructor_nativeanimesource_new(
+        `sourceId`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): Long
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_detail_request(
+        `ptr`: Long, `id`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_list_request(
+        `ptr`: Long,
+        `year`: Short,
+        `season`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_parse_detail(
+        `ptr`: Long, `content`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_parse_list(
+        `ptr`: Long, `content`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_parse_search(
+        `ptr`: Long, `content`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_search_request(
+        `ptr`: Long, `keyword`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_method_nativeanimesource_source_id(
+        `ptr`: Long, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
     external fun uniffi_anilist_fn_func_week_order(
         `today`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    external fun uniffi_anilist_fn_func_available_sources(
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
     external fun ffi_anilist_rustbuffer_alloc(
@@ -1024,6 +1104,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_anilist_checksum_func_week_order() and 0xFFFF) != 63976) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_anilist_checksum_func_available_sources() and 0xFFFF) != 38935) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_anilist_checksum_method_nativeanimeparser_parse_detail() and 0xFFFF) != 28752) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1036,7 +1119,31 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_anilist_checksum_method_nativeanimeparser_source_id() and 0xFFFF) != 15569) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_detail_request() and 0xFFFF) != 52733) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_list_request() and 0xFFFF) != 62741) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_parse_detail() and 0xFFFF) != 21920) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_parse_list() and 0xFFFF) != 2591) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_parse_search() and 0xFFFF) != 45512) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_search_request() and 0xFFFF) != 27054) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_method_nativeanimesource_source_id() and 0xFFFF) != 35926) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_anilist_checksum_constructor_nativeanimeparser_new() and 0xFFFF) != 32263) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_anilist_checksum_constructor_nativeanimesource_new() and 0xFFFF) != 60266) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1174,28 +1281,28 @@ private class UniffiJnaCleanable(
 // using Android or not.
 // There are further runtime checks to chose the correct implementation
 // of the cleaner.
+
+
 private fun UniffiCleaner.Companion.create(): UniffiCleaner =
-    try {
-        // For safety's sake: if the library hasn't been run in android_cleaner = true
-        // mode, but is being run on Android, then we still need to think about
-        // Android API versions.
-        // So we check if java.lang.ref.Cleaner is there, and use that…
-        Class.forName("java.lang.ref.Cleaner")
-        JavaLangRefCleaner()
-    } catch (e: ClassNotFoundException) {
-        // … otherwise, fallback to the JNA cleaner.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        AndroidSystemCleaner()
+    } else {
         UniffiJnaCleaner()
     }
 
-private class JavaLangRefCleaner : UniffiCleaner {
-    val cleaner = java.lang.ref.Cleaner.create()
+// The SystemCleaner, available from API Level 33.
+// Some API Level 33 OSes do not support using it, so we require API Level 34.
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+private class AndroidSystemCleaner : UniffiCleaner {
+    val cleaner = android.system.SystemCleaner.cleaner()
 
     override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
-        JavaLangRefCleanable(cleaner.register(value, cleanUpTask))
+        AndroidSystemCleanable(cleaner.register(value, cleanUpTask))
 }
 
-private class JavaLangRefCleanable(
-    val cleanable: java.lang.ref.Cleaner.Cleanable
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+private class AndroidSystemCleanable(
+    private val cleanable: java.lang.ref.Cleaner.Cleanable,
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
 }
@@ -1623,6 +1730,376 @@ object FfiConverterTypeNativeAnimeParser : FfiConverter<NativeAnimeParser, Long>
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+interface NativeAnimeSourceInterface {
+
+    fun `detailRequest`(`id`: String): HttpRequest
+
+    fun `listRequest`(`year`: UShort, `season`: AnimeSeason): HttpRequest
+
+    fun `parseDetail`(`content`: String): Anime
+
+    fun `parseList`(`content`: String): List<Anime>
+
+    fun `parseSearch`(`content`: String): List<String>
+
+    fun `searchRequest`(`keyword`: String): HttpRequest
+
+    fun `sourceId`(): String
+
+    companion object
+}
+
+open class NativeAnimeSource : Disposable, AutoCloseable, NativeAnimeSourceInterface {
+
+    @Suppress("UNUSED_PARAMETER")
+            /**
+             * @suppress
+             */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    constructor(`sourceId`: String) :
+            this(
+                UniffiWithHandle,
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_constructor_nativeanimesource_new(
+
+
+                        FfiConverterString.lower(`sourceId`), _status
+                    )
+                }
+            )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_anilist_fn_free_nativeanimesource(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object")
+        }
+        return uniffiRustCall { status ->
+            UniffiLib.uniffi_anilist_fn_clone_nativeanimesource(handle, status)
+        }
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `detailRequest`(`id`: String): HttpRequest {
+        return FfiConverterTypeHttpRequest.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_detail_request(
+                        it,
+
+                        FfiConverterString.lower(`id`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `listRequest`(`year`: UShort, `season`: AnimeSeason): HttpRequest {
+        return FfiConverterTypeHttpRequest.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_list_request(
+                        it,
+
+                        FfiConverterUShort.lower(`year`),
+                        FfiConverterTypeAnimeSeason.lower(`season`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `parseDetail`(`content`: String): Anime {
+        return FfiConverterTypeAnime.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_parse_detail(
+                        it,
+
+                        FfiConverterString.lower(`content`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `parseList`(`content`: String): List<Anime> {
+        return FfiConverterSequenceTypeAnime.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_parse_list(
+                        it,
+
+                        FfiConverterString.lower(`content`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `parseSearch`(`content`: String): List<String> {
+        return FfiConverterSequenceString.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_parse_search(
+                        it,
+
+                        FfiConverterString.lower(`content`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    @Throws(AnilistException::class)
+    override fun `searchRequest`(`keyword`: String): HttpRequest {
+        return FfiConverterTypeHttpRequest.lift(
+            callWithHandle {
+                uniffiRustCallWithError(AnilistException) { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_search_request(
+                        it,
+
+                        FfiConverterString.lower(`keyword`), _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    override fun `sourceId`(): String {
+        return FfiConverterString.lift(
+            callWithHandle {
+                uniffiRustCall { _status ->
+                    UniffiLib.uniffi_anilist_fn_method_nativeanimesource_source_id(
+                        it,
+                        _status
+                    )
+                }
+            }
+        )
+    }
+
+
+    /**
+     * @suppress
+     */
+    companion object
+
+}
+
+
+/**
+ * @suppress
+ */
+object FfiConverterTypeNativeAnimeSource : FfiConverter<NativeAnimeSource, Long> {
+    override fun lower(value: NativeAnimeSource): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): NativeAnimeSource {
+        return NativeAnimeSource(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): NativeAnimeSource {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: NativeAnimeSource) = 8UL
+
+    override fun write(value: NativeAnimeSource, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 data class Anime(
     var `id`: String,
     var `name`: String,
@@ -1799,6 +2276,80 @@ object FfiConverterTypeAnimeTime : FfiConverterRustBuffer<AnimeTime> {
 }
 
 
+data class HttpHeader(
+    var `name`: String,
+    var `value`: String
+
+) {
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+object FfiConverterTypeHttpHeader : FfiConverterRustBuffer<HttpHeader> {
+    override fun read(buf: ByteBuffer): HttpHeader {
+        return HttpHeader(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HttpHeader) = (
+            FfiConverterString.allocationSize(value.`name`) +
+                    FfiConverterString.allocationSize(value.`value`)
+            )
+
+    override fun write(value: HttpHeader, buf: ByteBuffer) {
+        FfiConverterString.write(value.`name`, buf)
+        FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+data class HttpRequest(
+    var `method`: HttpMethod,
+    var `url`: String,
+    var `headers`: List<HttpHeader>,
+    var `body`: String?
+
+) {
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+object FfiConverterTypeHttpRequest : FfiConverterRustBuffer<HttpRequest> {
+    override fun read(buf: ByteBuffer): HttpRequest {
+        return HttpRequest(
+            FfiConverterTypeHttpMethod.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeHttpHeader.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: HttpRequest) = (
+            FfiConverterTypeHttpMethod.allocationSize(value.`method`) +
+                    FfiConverterString.allocationSize(value.`url`) +
+                    FfiConverterSequenceTypeHttpHeader.allocationSize(value.`headers`) +
+                    FfiConverterOptionalString.allocationSize(value.`body`)
+            )
+
+    override fun write(value: HttpRequest, buf: ByteBuffer) {
+        FfiConverterTypeHttpMethod.write(value.`method`, buf)
+        FfiConverterString.write(value.`url`, buf)
+        FfiConverterSequenceTypeHttpHeader.write(value.`headers`, buf)
+        FfiConverterOptionalString.write(value.`body`, buf)
+    }
+}
+
+
 data class Minute(
     var `value`: UShort
 
@@ -1828,6 +2379,39 @@ object FfiConverterTypeMinute : FfiConverterRustBuffer<Minute> {
 }
 
 
+data class SourceInfo(
+    var `id`: String,
+    var `name`: String
+
+) {
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+object FfiConverterTypeSourceInfo : FfiConverterRustBuffer<SourceInfo> {
+    override fun read(buf: ByteBuffer): SourceInfo {
+        return SourceInfo(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SourceInfo) = (
+            FfiConverterString.allocationSize(value.`id`) +
+                    FfiConverterString.allocationSize(value.`name`)
+            )
+
+    override fun write(value: SourceInfo, buf: ByteBuffer) {
+        FfiConverterString.write(value.`id`, buf)
+        FfiConverterString.write(value.`name`, buf)
+    }
+}
+
+
 sealed class AnilistException : Exception() {
 
     class UnsupportedSource(
@@ -1845,28 +2429,28 @@ sealed class AnilistException : Exception() {
 
     class InvalidResponse(
 
-        val `_message`: String
+        val `detail`: String
     ) : AnilistException() {
         override val message
-            get() = "message=${`_message`}"
+            get() = "detail=${`detail`}"
     }
 
     class TimezoneUnavailable(
 
-        val `_message`: String
+        val `detail`: String
     ) : AnilistException() {
         override val message
-            get() = "message=${`_message`}"
+            get() = "detail=${`detail`}"
     }
 
     class AnimeConversion(
 
         val `animeId`: String,
 
-        val `_message`: String
+        val `detail`: String
     ) : AnilistException() {
         override val message
-            get() = "animeId=${`animeId`}, message=${`_message`}"
+            get() = "animeId=${`animeId`}, detail=${`detail`}"
     }
 
 
@@ -1924,20 +2508,20 @@ object FfiConverterTypeAnilistError : FfiConverterRustBuffer<AnilistException> {
             is AnilistException.InvalidResponse -> (
                     // Add the size for the Int that specifies the variant plus the size needed for all fields
                     4UL
-                            + FfiConverterString.allocationSize(value.`message`)
+                            + FfiConverterString.allocationSize(value.`detail`)
                     )
 
             is AnilistException.TimezoneUnavailable -> (
                     // Add the size for the Int that specifies the variant plus the size needed for all fields
                     4UL
-                            + FfiConverterString.allocationSize(value.`message`)
+                            + FfiConverterString.allocationSize(value.`detail`)
                     )
 
             is AnilistException.AnimeConversion -> (
                     // Add the size for the Int that specifies the variant plus the size needed for all fields
                     4UL
                             + FfiConverterString.allocationSize(value.`animeId`)
-                            + FfiConverterString.allocationSize(value.`message`)
+                            + FfiConverterString.allocationSize(value.`detail`)
                     )
         }
     }
@@ -1956,18 +2540,18 @@ object FfiConverterTypeAnilistError : FfiConverterRustBuffer<AnilistException> {
 
             is AnilistException.InvalidResponse -> {
                 buf.putInt(3)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`detail`, buf)
             }
 
             is AnilistException.TimezoneUnavailable -> {
                 buf.putInt(4)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`detail`, buf)
             }
 
             is AnilistException.AnimeConversion -> {
                 buf.putInt(5)
                 FfiConverterString.write(value.`animeId`, buf)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`detail`, buf)
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
@@ -2000,6 +2584,34 @@ object FfiConverterTypeAnimeSeason : FfiConverterRustBuffer<AnimeSeason> {
     override fun allocationSize(value: AnimeSeason) = 4UL
 
     override fun write(value: AnimeSeason, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+enum class HttpMethod {
+
+    GET,
+    POST;
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+object FfiConverterTypeHttpMethod : FfiConverterRustBuffer<HttpMethod> {
+    override fun read(buf: ByteBuffer) = try {
+        HttpMethod.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: HttpMethod) = 4UL
+
+    override fun write(value: HttpMethod, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -2300,6 +2912,58 @@ object FfiConverterSequenceTypeAnimeStreaming :
 /**
  * @suppress
  */
+object FfiConverterSequenceTypeHttpHeader : FfiConverterRustBuffer<List<HttpHeader>> {
+    override fun read(buf: ByteBuffer): List<HttpHeader> {
+        val len = buf.getInt()
+        return List<HttpHeader>(len) {
+            FfiConverterTypeHttpHeader.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<HttpHeader>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeHttpHeader.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<HttpHeader>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeHttpHeader.write(it, buf)
+        }
+    }
+}
+
+
+/**
+ * @suppress
+ */
+object FfiConverterSequenceTypeSourceInfo : FfiConverterRustBuffer<List<SourceInfo>> {
+    override fun read(buf: ByteBuffer): List<SourceInfo> {
+        val len = buf.getInt()
+        return List<SourceInfo>(len) {
+            FfiConverterTypeSourceInfo.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SourceInfo>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSourceInfo.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SourceInfo>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSourceInfo.write(it, buf)
+        }
+    }
+}
+
+
+/**
+ * @suppress
+ */
 object FfiConverterSequenceTypeScheduleDay : FfiConverterRustBuffer<List<ScheduleDay>> {
     override fun read(buf: ByteBuffer): List<ScheduleDay> {
         val len = buf.getInt()
@@ -2332,6 +2996,17 @@ fun `weekOrder`(`today`: Weekday): List<ScheduleDay> {
 
 
                 FfiConverterTypeWeekday.lower(`today`), _status
+            )
+        }
+    )
+}
+
+fun `availableSources`(): List<SourceInfo> {
+    return FfiConverterSequenceTypeSourceInfo.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.uniffi_anilist_fn_func_available_sources(
+
+                _status
             )
         }
     )

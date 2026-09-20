@@ -10,15 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import one.muisnowdevs.apps.anilist.source.AnilistAnime
-import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
-import one.muisnowdevs.apps.anilist.source.ScheduleDay
-import one.muisnowdevs.apps.anilist.source.youranimes.YourAnimesSource
-import kotlin.coroutines.coroutineContext
+import one.muisnowdevs.apps.anilist.model.AnimeSeasonYear
+import one.muisnowdevs.apps.anilist.model.ScheduleDay
+import one.muisnowdevs.apps.anilist.model.ScheduledAnime
+import one.muisnowdevs.apps.anilist.model.toSchedule
+import one.muisnowdevs.apps.anilist.source.AnilistClient
 
 class MainViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow<Map<ScheduleDay, List<AnilistAnime>>>(emptyMap())
-    val uiState: StateFlow<Map<ScheduleDay, List<AnilistAnime>>> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<Map<ScheduleDay, List<ScheduledAnime>>>(emptyMap())
+    val uiState: StateFlow<Map<ScheduleDay, List<ScheduledAnime>>> = _uiState.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -33,8 +33,10 @@ class MainViewModel : ViewModel() {
      * load: a second copy held up in the app bar could name one season while the list underneath
      * still held another.
      */
-    private val _selected = MutableStateFlow(AnilistSeasonYear.current())
-    val selected: StateFlow<AnilistSeasonYear> = _selected.asStateFlow()
+    private val _selected = MutableStateFlow(AnimeSeasonYear.current())
+    val selected: StateFlow<AnimeSeasonYear> = _selected.asStateFlow()
+
+    private val client = AnilistClient("youranimes")
 
     private var loadJob: Job? = null
 
@@ -42,7 +44,7 @@ class MainViewModel : ViewModel() {
         reload()
     }
 
-    fun select(seasonYear: AnilistSeasonYear) {
+    fun select(seasonYear: AnimeSeasonYear) {
         if (seasonYear == _selected.value) return
 
         _selected.value = seasonYear
@@ -59,12 +61,12 @@ class MainViewModel : ViewModel() {
         loadJob = viewModelScope.launch { load(_selected.value) }
     }
 
-    private suspend fun load(seasonYear: AnilistSeasonYear) {
+    private suspend fun load(seasonYear: AnimeSeasonYear) {
         _isLoading.value = true
         _error.value = null
 
         try {
-            _uiState.value = YourAnimesSource.list(seasonYear.year, seasonYear.season)
+            _uiState.value = client.list(seasonYear.year.value, seasonYear.season).toSchedule()
         } catch (cancellation: CancellationException) {
             // Rethrown rather than reported: this is the load above being replaced, not a failure,
             // and swallowing it would break the cancellation it was asked for.

@@ -22,9 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import one.muisnowdevs.apps.anilist.formatTimeInDay
-import one.muisnowdevs.apps.anilist.source.AnilistAnime
-import one.muisnowdevs.apps.anilist.source.getCurrentMinute
-import one.muisnowdevs.apps.anilist.source.getMinimalMinute
+import one.muisnowdevs.apps.anilist.model.WeekTime
+import one.muisnowdevs.apps.anilist.model.getCurrentMinute
+import one.muisnowdevs.apps.anilist.model.getMinimalMinute
+import uniffi.anilist.Anime
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -39,13 +40,14 @@ import kotlin.time.Duration.Companion.minutes
  */
 @Composable
 fun AnimeCard(
-    anime: AnilistAnime,
+    anime: Anime,
+    localTime: WeekTime?,
     modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
     isCurrentSeason: Boolean = true,
     onClick: () -> Unit = {}
 ) {
-    val weeklyTime = remember(anime) { anime.onAirTime?.minuteOfWeek }
+    val weeklyTime = remember(localTime) { localTime?.minuteOfWeek }
 
     var isOver by remember(weeklyTime, isCurrentSeason) {
         mutableStateOf(
@@ -54,7 +56,7 @@ fun AnimeCard(
         )
     }
 
-    LaunchedEffect(isCurrentSeason) {
+    LaunchedEffect(weeklyTime, isCurrentSeason) {
         if (!isCurrentSeason) return@LaunchedEffect
         if (isOver) return@LaunchedEffect
         if (weeklyTime == null) return@LaunchedEffect
@@ -91,7 +93,7 @@ fun AnimeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = formatTimeInDay(anime.onAirTime?.minute),
+                        text = formatTimeInDay(localTime?.minute),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

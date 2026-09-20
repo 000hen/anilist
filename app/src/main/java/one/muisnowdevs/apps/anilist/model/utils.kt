@@ -1,12 +1,8 @@
-package one.muisnowdevs.apps.anilist.source
+package one.muisnowdevs.apps.anilist.model
 
-import android.util.Log
-import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.util.Calendar
-import kotlin.time.measureTime
 
-private const val TAG = "utils"
 
 /**
  * Start of today in the same minutes-since-Monday space as [WeekTime.minuteOfWeek].
@@ -22,12 +18,4 @@ fun getCurrentMinute(): Int {
     return getMinimalMinute() +
             calendar.get(Calendar.HOUR_OF_DAY) * 60 +
             calendar.get(Calendar.MINUTE)
-}
-
-fun <T> reportTimeElapsed(block: suspend () -> T): T {
-    var result: T
-    val elapsed = measureTime { result = runBlocking { block() } }
-    Log.d(TAG, "Processed in $elapsed")
-
-    return result
 }

@@ -69,6 +69,10 @@ android {
             isUniversalApk = false
         }
     }
+    packaging {
+        // JNA also ships obsolete ABIs for which this app has no Rust library.
+        jniLibs.excludes += setOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -102,5 +106,4 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     implementation(project(":source"))
-    implementation(project(":source:youranimes"))
 }

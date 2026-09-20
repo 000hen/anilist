@@ -25,8 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import one.muisnowdevs.apps.anilist.source.AnilistSeason
-import one.muisnowdevs.apps.anilist.source.AnilistSeasonYear
+import one.muisnowdevs.apps.anilist.model.AnimeSeasonYear
+import uniffi.anilist.AnimeSeason
 import java.time.Year
 
 /**
@@ -38,8 +38,8 @@ import java.time.Year
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeasonPickerSheet(
-    selected: AnilistSeasonYear,
-    onSelect: (AnilistSeasonYear) -> Unit,
+    selected: AnimeSeasonYear,
+    onSelect: (AnimeSeasonYear) -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
     // The year being browsed, which is not yet the year being shown — stepping to 2019 loads
@@ -69,7 +69,7 @@ fun SeasonPickerSheet(
 }
 
 /**
- * Walks a year at a time between [AnilistSeasonYear.EARLIEST] and [AnilistSeasonYear.latest].
+ * Walks a year at a time between [AnimeSeasonYear.EARLIEST] and [AnimeSeasonYear.latest].
  *
  * The arrows disable at the ends rather than disappearing, so the range reads as a limit of what is
  * out there rather than as the control breaking.
@@ -87,7 +87,7 @@ private fun YearStepper(
     ) {
         IconButton(
             onClick = { onYearChange(year.minusYears(1)) },
-            enabled = year > AnilistSeasonYear.EARLIEST
+            enabled = year > AnimeSeasonYear.EARLIEST
         ) {
             Icon(Icons.Rounded.ChevronLeft, contentDescription = "前一年")
         }
@@ -99,7 +99,7 @@ private fun YearStepper(
 
         IconButton(
             onClick = { onYearChange(year.plusYears(1)) },
-            enabled = year < AnilistSeasonYear.latest()
+            enabled = year < AnimeSeasonYear.latest()
         ) {
             Icon(Icons.Rounded.ChevronRight, contentDescription = "後一年")
         }
@@ -116,18 +116,18 @@ private fun YearStepper(
 @Composable
 private fun SeasonGrid(
     year: Year,
-    selected: AnilistSeasonYear,
-    onSelect: (AnilistSeasonYear) -> Unit,
+    selected: AnimeSeasonYear,
+    onSelect: (AnimeSeasonYear) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        for (pair in AnilistSeason.entries.chunked(2)) {
+        for (pair in AnimeSeason.entries.chunked(2)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (season in pair) {
-                    val seasonYear = AnilistSeasonYear(year, season)
+                    val seasonYear = AnimeSeasonYear(year, season)
 
                     if (seasonYear == selected) {
                         FilledTonalButton(
