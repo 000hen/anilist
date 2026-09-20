@@ -1,12 +1,16 @@
 # Anilist
 
-An Android app for this season's anime broadcast schedule.
+An Android app for browsing anime broadcast schedules by year and season.
 
-It opens on today and reads forward through the rest of the week: every title airing, in the order
-it airs, with the time it starts. Tap a title for its artwork, a synopsis, where to watch it and its
-official links. Swipe a row either way to star it, and press the star in the app bar to hide
-everything you have not. A row that has already gone out today is tinted, and one still to come
-flips over on its own while you are looking at the list.
+It opens on the current season. Press the season in the app bar to browse seasons from 2015 through
+next year; each schedule is ordered as a week starting from today. Tap a title for its artwork, a
+synopsis, where to watch it, and its official links. Pull to refresh, or retry a failed load and
+open
+its diagnostic details.
+
+Swipe a row either way to star it, and press the star in the app bar to hide everything you have
+not. While viewing the current season, a title that has already aired today is tinted, and one still
+to come changes automatically when its airtime arrives.
 
 > Schedule data is scraped from the public pages of [YourAnimes](https://youranimes.tw). There is no
 > official API, so changes to the website may cause the schedule to stop working without notice. All
@@ -15,8 +19,10 @@ flips over on its own while you are looking at the list.
 
 ## Installation
 
-Download the APK for your device from the [latest release](/releases/latest), then open it and allow
-installation from your browser or file manager when Android asks. Android 8.0 or newer is required.
+Download the APK for your device from the
+[latest release](https://github.com/000hen/anilist/releases/latest), then open it and allow
+installation
+from your browser or file manager when Android asks. Android 8.0 or newer is required.
 
 - `anilist-arm64-v8a.apk` — most current Android phones and tablets
 - `anilist-armeabi-v7a.apk` — older 32-bit ARM devices
@@ -34,11 +40,11 @@ submodule with `git submodule update --init --recursive`, then install `cargo-nd
 Rust targets for `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`,
 and `x86_64-linux-android`.
 
-`app` owns the UI, season selection, and local-time schedule projection. The single `source`
-module exposes Rust's generated models and connects `NativeAnimeSource` to Android's OkHttp
-transport. Rust owns source URLs, request construction, parsing, and vendor mapping. Its shared
-`HttpRequest` is source-independent; Rust fetchers can use the `HttpClient` implementation for
-reqwest while Android uses `OkHttpTransport`. Android builds use `--no-default-features
+`app` owns the UI, season selection, and local-time schedule projection. The `source` module uses
+Rust's generated models and `NativeAnimeSource` through UniFFI. Rust owns source URLs, request
+construction, parsing, and vendor mapping; Android executes the source-independent `HttpRequest`
+with `OkHttpTransport`, so changing seasons can cancel an in-flight call. Rust-side fetchers can
+instead use the shared `HttpClient` trait with reqwest. Android builds use `--no-default-features
 --features all-sources`, excluding Rust HTTP, Tokio, and timezone databases.
 
 After changing the Rust FFI API, regenerate the checked-in Kotlin bindings from a matching
@@ -67,8 +73,8 @@ Open the project in Android Studio and run it, or drive the build from the comma
 ./gradlew connectedDebugAndroidTest  # instrumented tests, on a connected device
 ```
 
-The app needs a network connection to load anything, so an emulator or device without one shows an
-empty week.
+The app needs a network connection to load content. An offline emulator or device shows the load
+failure screen with retry and diagnostic-detail actions.
 
 `./gradlew assembleRelease -PreleasePerAbi=true` produces four unsigned, architecture-specific APKs
 under `app/build/outputs/apk/release/`; without that property, local builds retain the conventional

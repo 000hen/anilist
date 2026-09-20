@@ -1,13 +1,15 @@
 # Anilist
 
-本專案是一款提供當季動畫播出時間表的 Android 應用程式。
+本專案是一款可依年份與季度瀏覽動畫播出時間表的 Android 應用程式。
 
 [English version](README.en.md)
 
-應用程式會從今天開始，依播出順序列出本週剩餘時間即將播出的所有作品與播出時間。
-點選作品即可查看圖片、簡介、收看平台與官方連結。向左或向右滑動項目可將作品加入收藏；
-按下應用程式列中的星號，則可隱藏所有未收藏的作品。今天已播出的項目會套用不同色彩，
-尚未播出的項目也會在播出時間到達時自動變色。
+應用程式啟動時會顯示當季番表；點選應用程式列中的季度即可瀏覽 2015 年至明年的季度。
+每一季都會以今天開始的一週順序列出作品與播出時間。點選作品即可查看圖片、簡介、
+收看平台與官方連結；下拉可重新載入，載入失敗時也能重試並查看錯誤詳細資訊。
+
+向左或向右滑動項目可將作品加入收藏；按下應用程式列中的星號，則可隱藏所有未收藏的作品。
+瀏覽當季時，今天已播出的項目會套用不同色彩，尚未播出的項目也會在播出時間到達時自動變色。
 
 > 播出時間表資料擷取自 [YourAnimes](https://youranimes.tw) 的公開頁面。該網站並未提供
 > 官方 API，因此網站改版可能導致時間表在未預警的情況下無法載入。所有節目資訊、圖片與
@@ -15,8 +17,8 @@
 
 ## 安裝
 
-請從[最新版本](/releases/latest)下載適合裝置的 APK，開啟檔案後，依 Android 提示允許瀏覽器
-或檔案管理員安裝應用程式。裝置需執行 Android 8.0 或更新版本。
+請從[最新版本](https://github.com/000hen/anilist/releases/latest)下載適合裝置的 APK，
+開啟檔案後，依 Android 提示允許瀏覽器或檔案管理員安裝應用程式。裝置需執行 Android 8.0 或更新版本。
 
 - `anilist-arm64-v8a.apk` — 多數現行 Android 手機與平板
 - `anilist-armeabi-v7a.apk` — 較舊的 32 位元 ARM 裝置
@@ -32,7 +34,14 @@ sha256sum --check SHA256SUMS.txt
 
 ## 開發
 
-你需要 Android SDK 與 JDK 21；安裝 Android Studio 即可取得兩者。
+你需要 Android SDK、Android NDK、JDK 21、Rust 與 `cargo-ndk`。請先初始化 Rust submodule，
+再安裝四種 Android Rust targets：
+
+```sh
+git submodule update --init --recursive
+cargo install cargo-ndk --locked
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+```
 
 複製儲存庫後，在專案根目錄建立 `local.properties`，指定 Android SDK 的位置：
 
@@ -51,7 +60,7 @@ sdk.dir=/path/to/android/sdk
 ./gradlew connectedDebugAndroidTest  # 在已連線的裝置上執行儀器化測試
 ```
 
-應用程式需要網路連線才能載入內容，因此未連上網路的模擬器或裝置只會顯示空白的一週。
+應用程式需要網路連線才能載入內容；未連上網路時會顯示載入失敗畫面，並提供重試與錯誤詳細資訊。
 
 執行 `./gradlew assembleRelease -PreleasePerAbi=true` 會在
 `app/build/outputs/apk/release/` 下產生四個未簽署、分別適用於不同架構的 APK；若省略該
@@ -86,10 +95,10 @@ sdk.dir=/path/to/android/sdk
 
 ## Rust 與 Android 的分工
 
-`app` 負責 UI、季度選擇和本地時區的時間表投影；單一 `source` 模組提供 Rust 產生的
-資料模型，並透過 OkHttp 執行 `NativeAnimeSource` 建立的請求。來源網址、請求組合、
-解析與平台資料對應由 Rust 管理。共用的 `HttpRequest` 不依賴特定來源；Rust 的
-`HttpClient` 使用 reqwest，Android 使用 `OkHttpTransport`。
+`app` 負責 UI、季度選擇和本地時區的時間表投影；`source` 模組透過 UniFFI 使用 Rust
+產生的資料模型與 `NativeAnimeSource`。Rust 負責來源網址、請求組合、解析與平台資料對應，
+Android 則以 `OkHttpTransport` 執行來源回傳的通用 `HttpRequest`，因此切換季度時可取消
+進行中的請求。Rust 端需要自行取得資料時，則可透過共用的 `HttpClient` trait 使用 reqwest。
 
 Android 使用 `--no-default-features --features all-sources`，不包含 Rust HTTP、Tokio
 或時區資料庫。建置前需初始化 `rust/anilist-rs` submodule，安裝 Android NDK、
