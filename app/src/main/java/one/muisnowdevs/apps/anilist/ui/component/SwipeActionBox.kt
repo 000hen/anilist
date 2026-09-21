@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -30,13 +31,20 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * How far the row has to travel before releasing it performs the action, as a fraction of its own
+ * width. A fraction keeps the gesture proportional on phones and tablets; a quarter is clear of
+ * normal horizontal drift while scrolling without requiring the row to cross most of the screen.
+ */
 private const val ArmFraction = 0.25f
 
+/** Sends the row home from wherever the finger left it, carrying the release velocity into it. */
 private val ReturnSpec =
     spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
 private enum class RevealedEdge { None, Left, Right }
 
+/** Physical edge uncovered by the swipe, independent of layout direction. */
 enum class SwipeActionEdge { Left, Right }
 
 /**
@@ -61,16 +69,16 @@ fun SwipeActionBox(
     val currentOnAction by rememberUpdatedState(onAction)
     val haptics = LocalHapticFeedback.current
 
-    // This is deliberately transient. Restoring a saved offset could bring a recycled row back
-    // already open even though every completed or cancelled gesture is meant to return home.
+    // Deliberately remember rather than save the position: a recycled row must not return already
+    // held open. Every completed or cancelled gesture comes home, so there is nothing worth saving.
     val offsetX = remember { Animatable(0f) }
     var rowWidth by remember { mutableIntStateOf(0) }
     var isDragging by remember { mutableStateOf(false) }
     var isCommitted by remember { mutableStateOf(false) }
 
-    // Keep the target separate from Animatable.value because drag deltas can arrive faster than the
-    // coroutines applying them. Once the drag stops, queued deltas are intentionally ignored so one
-    // cannot cancel the return animation and leave the row stranded away from zero.
+    // Deltas can arrive faster than the coroutines applying them, so accumulate the target before
+    // scheduling each snap. Once release begins, queued deltas are deliberately dropped; otherwise
+    // one can take Animatable's mutex from the return animation and strand the row away from zero.
     val dragTarget = remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     val dragState = rememberDraggableState { delta ->
@@ -80,6 +88,8 @@ fun SwipeActionBox(
         }
     }
 
+    // These only matter when a boundary is crossed, while Modifier.offset reads the raw value in
+    // its placement lambda so dragging does not recompose content on every frame.
     val revealedEdge by remember {
         derivedStateOf {
             when {
@@ -97,7 +107,7 @@ fun SwipeActionBox(
 
     // Only the outward crossing reports threshold feedback. The spring home crosses the same
     // boundary in reverse and must stay silent.
-    androidx.compose.runtime.LaunchedEffect(isArmed) {
+    LaunchedEffect(isArmed) {
         if (!isDragging) return@LaunchedEffect
         haptics.performHapticFeedback(
             if (isArmed) HapticFeedbackType.GestureThresholdActivate
@@ -123,6 +133,8 @@ fun SwipeActionBox(
                     // delta that never reached the screen must not trigger an action the user never
                     // saw become armed.
                     if (isArmed) {
+                        // Keep confirmation latched while the row returns. isArmed becomes false
+                        // partway home, but the visual acknowledgement must survive until rest.
                         isCommitted = true
                         currentOnAction()
                     }
@@ -136,6 +148,8 @@ fun SwipeActionBox(
                     }
                 }
             )
+            // A swipe is not available to every accessibility input method, so expose the same
+            // operation as an explicit custom action.
             .semantics {
                 customActions = listOf(
                     CustomAccessibilityAction(actionLabel) {
